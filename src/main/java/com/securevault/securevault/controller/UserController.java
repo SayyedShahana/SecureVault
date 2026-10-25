@@ -27,10 +27,10 @@ public class UserController {
                 .map(user -> {
                     UserResponse userResponse = new UserResponse(
                             user.getId(),
+                            user.getFullName(),
                             user.getEmail(),
-                            user.getRole(),
+                            user.getRole().getRoleName(),
                             user.isEmailVerified());
-
                     return ResponseEntity.ok(
                             new ApiResponse<>(
                                     true,
