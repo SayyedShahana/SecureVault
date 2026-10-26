@@ -1,8 +1,9 @@
-
 package com.securevault.securevault.exception;
 
+import com.securevault.securevault.constant.ApiMessages;
 import com.securevault.securevault.dto.ApiResponse;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -12,52 +13,38 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    @ExceptionHandler(IllegalArgumentException.class)
-    public ResponseEntity<ApiResponse<Void>> handleBadRequest(
-            IllegalArgumentException exception) {
+  private static final Logger logger = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
-        ApiResponse<Void> response = new ApiResponse<>(
-                false,
-                exception.getMessage(),
-                null);
+  @ExceptionHandler(IllegalArgumentException.class)
+  public ResponseEntity<ApiResponse<Void>> handleBadRequest(IllegalArgumentException exception) {
 
-        return ResponseEntity
-                .status(HttpStatus.BAD_REQUEST)
-                .body(response);
-    }
+    ApiResponse<Void> response = new ApiResponse<>(false, exception.getMessage(), null);
 
-    @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ApiResponse<Void>> handleValidationErrors(
-            MethodArgumentNotValidException exception) {
+    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+  }
 
-        String message = exception.getBindingResult()
-                .getFieldErrors()
-                .stream()
-                .findFirst()
-                .map(error -> error.getDefaultMessage())
-                .orElse("Invalid request data");
+  @ExceptionHandler(MethodArgumentNotValidException.class)
+  public ResponseEntity<ApiResponse<Void>> handleValidationErrors(
+      MethodArgumentNotValidException exception) {
 
-        ApiResponse<Void> response = new ApiResponse<>(
-                false,
-                message,
-                null);
+    String message =
+        exception.getBindingResult().getFieldErrors().stream()
+            .findFirst()
+            .map(error -> error.getDefaultMessage())
+            .orElse(ApiMessages.INVALID_REQUEST);
 
-        return ResponseEntity
-                .status(HttpStatus.BAD_REQUEST)
-                .body(response);
-    }
+    ApiResponse<Void> response = new ApiResponse<>(false, message, null);
 
-    @ExceptionHandler(Exception.class)
-    public ResponseEntity<ApiResponse<Void>> handleGeneralException(
-            Exception exception) {
+    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+  }
 
-        ApiResponse<Void> response = new ApiResponse<>(
-                false,
-                "An unexpected error occurred",
-                null);
+  @ExceptionHandler(Exception.class)
+  public ResponseEntity<ApiResponse<Void>> handleGeneralException(Exception exception) {
 
-        return ResponseEntity
-                .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(response);
-    }
+    logger.error("Unexpected server error occurred", exception);
+
+    ApiResponse<Void> response = new ApiResponse<>(false, ApiMessages.UNEXPECTED_ERROR, null);
+
+    return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+  }
 }
