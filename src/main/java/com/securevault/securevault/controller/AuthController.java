@@ -2,6 +2,7 @@ package com.securevault.securevault.controller;
 
 import com.securevault.securevault.common.JsonFields;
 import com.securevault.securevault.common.MessageKeys;
+import com.securevault.securevault.constant.ApiMessages;
 import com.securevault.securevault.dto.ApiResponse;
 import com.securevault.securevault.dto.LoginRequest;
 import com.securevault.securevault.dto.RegisterRequest;
@@ -15,7 +16,10 @@ import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -39,22 +43,22 @@ public class AuthController {
   @PostMapping("/register")
   public ResponseEntity<ApiResponse<UserResponse>> register(
       @Valid @RequestBody RegisterRequest request) {
-
-    User user = userService.register(request);
-
-    UserResponse userResponse =
-        new UserResponse(
-            user.getId(),
-            user.getFullName(),
-            user.getEmail(),
-            user.getRole().getRoleName(),
-            user.isEmailVerified());
+          User user = userService.register(request);
+                UserResponse userResponse = toUserResponse(user);
 
     ApiResponse<UserResponse> response =
         new ApiResponse<>(true, getMessage(MessageKeys.AUTH_REGISTER_SUCCESS), userResponse);
 
     return ResponseEntity.status(HttpStatus.CREATED).body(response);
   }
+  private UserResponse toUserResponse(User user) {
+                return new UserResponse(
+                                user.getId(),
+                                user.getFullName(),
+                                user.getEmail(),
+                                user.getRole().getRoleName(),
+                                user.isEmailVerified());
+        }
 
   @PostMapping("/login")
   public ResponseEntity<ApiResponse<Map<String, String>>> login(

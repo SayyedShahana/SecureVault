@@ -32,23 +32,20 @@ public class UserController {
         .findByEmail(email)
         .map(
             user -> {
-              UserResponse userResponse =
-                  new UserResponse(
-                      user.getId(),
-                      user.getFullName(),
-                      user.getEmail(),
-                      user.getRole().getRoleName(),
-                      user.isEmailVerified());
+              UserResponse userResponse = new UserResponse(
+                  user.getId(),
+                  user.getFullName(),
+                  user.getEmail(),
+                  user.getRole().getRoleName(),
+                  user.isEmailVerified());
 
-              String message =
-                  messageSource.getMessage(MessageKeys.USER_FOUND, null, Locale.getDefault());
+              String message = messageSource.getMessage(MessageKeys.USER_FOUND, null, Locale.getDefault());
 
               return ResponseEntity.ok(new ApiResponse<>(true, message, userResponse));
             })
         .orElseGet(
             () -> {
-              String message =
-                  messageSource.getMessage(MessageKeys.USER_NOT_FOUND, null, Locale.getDefault());
+              String message = messageSource.getMessage(MessageKeys.USER_NOT_FOUND, null, Locale.getDefault());
 
               return ResponseEntity.status(HttpStatus.NOT_FOUND)
                   .body(new ApiResponse<>(false, message, null));

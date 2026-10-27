@@ -1,3 +1,4 @@
+
 package com.securevault.securevault.service;
 
 import com.securevault.securevault.dto.RegisterRequest;
@@ -40,11 +41,10 @@ public class UserService {
       throw new IllegalArgumentException("Email is already registered");
     }
 
-    Role userRole =
-        roleRepository
-            .findByRoleName(DEFAULT_ROLE_NAME)
-            .orElseThrow(
-                () -> new IllegalStateException("Default role USER not found in roles table"));
+    Role userRole = roleRepository
+        .findByRoleName(DEFAULT_ROLE_NAME)
+        .orElseThrow(
+            () -> new IllegalStateException("Default role USER not found in roles table"));
 
     User user = new User();
     user.setFullName(request.getFullName().trim());
