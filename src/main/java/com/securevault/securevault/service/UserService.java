@@ -38,7 +38,7 @@ public class UserService {
     String email = request.getEmail().trim().toLowerCase(Locale.ROOT);
 
     if (userRepository.findByEmail(email).isPresent()) {
-      throw new IllegalArgumentException(ApiMessages.EMAIL_ALREADY_REGISTERED);
+      throw new IllegalArgumentException(ApiMessages.User.EMAIL_ALREADY_REGISTERED);
     }
 
     Role userRole =
