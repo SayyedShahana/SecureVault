@@ -1,8 +1,9 @@
-
 package com.securevault.securevault.exception;
 
+import com.securevault.securevault.common.MessageKeys;
 import com.securevault.securevault.dto.ApiResponse;
-
+import java.util.Locale;
+import org.springframework.context.MessageSource;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -12,52 +13,60 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    @ExceptionHandler(IllegalArgumentException.class)
-    public ResponseEntity<ApiResponse<Void>> handleBadRequest(
-            IllegalArgumentException exception) {
+  private final MessageSource messageSource;
 
-        ApiResponse<Void> response = new ApiResponse<>(
-                false,
-                exception.getMessage(),
-                null);
+  public GlobalExceptionHandler(MessageSource messageSource) {
+    this.messageSource = messageSource;
+  }
 
-        return ResponseEntity
-                .status(HttpStatus.BAD_REQUEST)
-                .body(response);
+  @ExceptionHandler(IllegalArgumentException.class)
+  public ResponseEntity<ApiResponse<Void>> handleBadRequest(IllegalArgumentException exception) {
+
+    String exceptionMessage = exception.getMessage();
+    String message;
+
+    if ("Invalid email or password".equals(exceptionMessage)) {
+      message = exceptionMessage;
+    } else if (exceptionMessage != null
+        && exceptionMessage.startsWith("Too many failed login attempts")) {
+      message = messageSource.getMessage(MessageKeys.AUTH_LOGIN_LOCKED, null, Locale.getDefault());
+    } else {
+      message =
+          messageSource.getMessage(MessageKeys.ERROR_INVALID_REQUEST, null, Locale.getDefault());
     }
 
-    @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ApiResponse<Void>> handleValidationErrors(
-            MethodArgumentNotValidException exception) {
+    ApiResponse<Void> response = new ApiResponse<>(false, message, null);
 
-        String message = exception.getBindingResult()
-                .getFieldErrors()
-                .stream()
-                .findFirst()
-                .map(error -> error.getDefaultMessage())
-                .orElse("Invalid request data");
+    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+  }
 
-        ApiResponse<Void> response = new ApiResponse<>(
-                false,
-                message,
-                null);
+  @ExceptionHandler(MethodArgumentNotValidException.class)
+  public ResponseEntity<ApiResponse<Void>> handleValidationErrors(
+      MethodArgumentNotValidException exception) {
 
-        return ResponseEntity
-                .status(HttpStatus.BAD_REQUEST)
-                .body(response);
-    }
+    String message =
+        exception.getBindingResult().getFieldErrors().stream()
+            .findFirst()
+            .map(error -> error.getDefaultMessage())
+            .filter(value -> value != null && !value.isBlank())
+            .orElseGet(
+                () ->
+                    messageSource.getMessage(
+                        MessageKeys.ERROR_INVALID_REQUEST, null, Locale.getDefault()));
 
-    @ExceptionHandler(Exception.class)
-    public ResponseEntity<ApiResponse<Void>> handleGeneralException(
-            Exception exception) {
+    ApiResponse<Void> response = new ApiResponse<>(false, message, null);
 
-        ApiResponse<Void> response = new ApiResponse<>(
-                false,
-                "An unexpected error occurred",
-                null);
+    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+  }
 
-        return ResponseEntity
-                .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(response);
-    }
+  @ExceptionHandler(Exception.class)
+  public ResponseEntity<ApiResponse<Void>> handleGeneralException(Exception exception) {
+
+    String message =
+        messageSource.getMessage(MessageKeys.ERROR_UNEXPECTED, null, Locale.getDefault());
+
+    ApiResponse<Void> response = new ApiResponse<>(false, message, null);
+
+    return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+  }
 }

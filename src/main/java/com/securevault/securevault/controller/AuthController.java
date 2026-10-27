@@ -1,6 +1,7 @@
-
 package com.securevault.securevault.controller;
 
+import com.securevault.securevault.common.JsonFields;
+import com.securevault.securevault.common.MessageKeys;
 import com.securevault.securevault.dto.ApiResponse;
 import com.securevault.securevault.dto.LoginRequest;
 import com.securevault.securevault.dto.RegisterRequest;
@@ -8,10 +9,10 @@ import com.securevault.securevault.dto.UserResponse;
 import com.securevault.securevault.entity.User;
 import com.securevault.securevault.service.AuthService;
 import com.securevault.securevault.service.UserService;
-
 import jakarta.validation.Valid;
 import java.util.Map;
-
+import org.springframework.context.MessageSource;
+import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -20,80 +21,86 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/auth")
 public class AuthController {
 
-        private final UserService userService;
-        private final AuthService authService;
+  private final UserService userService;
+  private final AuthService authService;
+  private final MessageSource messageSource;
 
-        public AuthController(UserService userService, AuthService authService) {
-                this.userService = userService;
-                this.authService = authService;
-        }
+  public AuthController(
+      UserService userService, AuthService authService, MessageSource messageSource) {
+    this.userService = userService;
+    this.authService = authService;
+    this.messageSource = messageSource;
+  }
 
-        @PostMapping("/register")
-        public ResponseEntity<ApiResponse<UserResponse>> register(
-                        @Valid @RequestBody RegisterRequest request) {
+  private String getMessage(String key) {
+    return messageSource.getMessage(key, null, LocaleContextHolder.getLocale());
+  }
 
-                User user = userService.register(request);
+  @PostMapping("/register")
+  public ResponseEntity<ApiResponse<UserResponse>> register(
+      @Valid @RequestBody RegisterRequest request) {
 
-                UserResponse userResponse = new UserResponse(
-                                user.getId(),
-                                user.getFullName(),
-                                user.getEmail(),
-                                user.getRole().getRoleName(),
-                                user.isEmailVerified());
+    User user = userService.register(request);
 
-                ApiResponse<UserResponse> response = new ApiResponse<>(
-                                true,
-                                "Registration successful",
-                                userResponse);
+    UserResponse userResponse =
+        new UserResponse(
+            user.getId(),
+            user.getFullName(),
+            user.getEmail(),
+            user.getRole().getRoleName(),
+            user.isEmailVerified());
 
-                return ResponseEntity
-                                .status(HttpStatus.CREATED)
-                                .body(response);
-        }
+    ApiResponse<UserResponse> response =
+        new ApiResponse<>(true, getMessage(MessageKeys.AUTH_REGISTER_SUCCESS), userResponse);
 
-        @PostMapping("/login")
-        public ResponseEntity<ApiResponse<Map<String, String>>> login(
-                        @Valid @RequestBody LoginRequest request) {
+    return ResponseEntity.status(HttpStatus.CREATED).body(response);
+  }
 
-                AuthService.LoginTokens tokens = authService.login(request);
+  @PostMapping("/login")
+  public ResponseEntity<ApiResponse<Map<String, String>>> login(
+      @Valid @RequestBody LoginRequest request) {
 
-                ApiResponse<Map<String, String>> response = new ApiResponse<>(
-                                true,
-                                "Login successful",
-                                Map.of(
-                                                "accessToken", tokens.accessToken(),
-                                                "refreshToken", tokens.refreshToken()));
+    AuthService.LoginTokens tokens = authService.login(request);
 
-                return ResponseEntity.ok(response);
-        }
+    ApiResponse<Map<String, String>> response =
+        new ApiResponse<>(
+            true,
+            getMessage(MessageKeys.AUTH_LOGIN_SUCCESS),
+            Map.of(
+                JsonFields.ACCESS_TOKEN, tokens.accessToken(),
+                JsonFields.REFRESH_TOKEN, tokens.refreshToken()));
 
-        @PostMapping("/refresh")
-        public ResponseEntity<ApiResponse<Map<String, String>>> refresh(
-                        @RequestBody Map<String, String> request) {
+    return ResponseEntity.ok(response);
+  }
 
-                AuthService.LoginTokens tokens = authService.refresh(request.get("refreshToken"));
+  @PostMapping("/refresh")
+  public ResponseEntity<ApiResponse<Map<String, String>>> refresh(
+      @RequestBody Map<String, String> request) {
 
-                ApiResponse<Map<String, String>> response = new ApiResponse<>(
-                                true,
-                                "Token refreshed successfully",
-                                Map.of(
-                                                "accessToken", tokens.accessToken(),
-                                                "refreshToken", tokens.refreshToken()));
+    AuthService.LoginTokens tokens = authService.refresh(request.get(JsonFields.REFRESH_TOKEN));
 
-                return ResponseEntity.ok(response);
-        }
+    ApiResponse<Map<String, String>> response =
+        new ApiResponse<>(
+            true,
+            getMessage(MessageKeys.AUTH_REFRESH_SUCCESS),
+            Map.of(
+                JsonFields.ACCESS_TOKEN, tokens.accessToken(),
+                JsonFields.REFRESH_TOKEN, tokens.refreshToken()));
 
-        @PostMapping("/logout")
-        public ResponseEntity<ApiResponse<String>> logout(
-                        @RequestBody Map<String, String> request) {
+    return ResponseEntity.ok(response);
+  }
 
-                authService.logout(request.get("refreshToken"));
+  @PostMapping("/logout")
+  public ResponseEntity<ApiResponse<String>> logout(@RequestBody Map<String, String> request) {
 
-                ApiResponse<String> response = new ApiResponse<>(
-                                true,
-                                "Logout successful",
-                                "Session revoked");
+    authService.logout(request.get(JsonFields.REFRESH_TOKEN));
 
-                return ResponseEntity.ok(response);
-        }
+    ApiResponse<String> response =
+        new ApiResponse<>(
+            true,
+            getMessage(MessageKeys.AUTH_LOGOUT_SUCCESS),
+            getMessage(MessageKeys.AUTH_LOGOUT_SESSION_REVOKED));
+
+    return ResponseEntity.ok(response);
+  }
 }
