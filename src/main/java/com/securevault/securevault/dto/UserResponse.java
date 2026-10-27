@@ -1,36 +1,41 @@
-
 package com.securevault.securevault.dto;
 
 public class UserResponse {
 
-    private Long id;
-    private String email;
-    private String role;
-    private boolean emailVerified;
+  private Long id;
+  private String fullName;
+  private String email;
+  private String role;
+  private boolean emailVerified;
 
-    public UserResponse() {
-    }
+  public UserResponse() {}
 
-    public UserResponse(Long id, String email, String role, boolean emailVerified) {
-        this.id = id;
-        this.email = email;
-        this.role = role;
-        this.emailVerified = emailVerified;
-    }
+  public UserResponse(Long id, String fullName, String email, String role, boolean emailVerified) {
 
-    public Long getId() {
-        return id;
-    }
+    this.id = id;
+    this.fullName = fullName;
+    this.email = email;
+    this.role = role;
+    this.emailVerified = emailVerified;
+  }
 
-    public String getEmail() {
-        return email;
-    }
+  public Long getId() {
+    return id;
+  }
 
-    public String getRole() {
-        return role;
-    }
+  public String getFullName() {
+    return fullName;
+  }
 
-    public boolean isEmailVerified() {
-        return emailVerified;
-    }
+  public String getEmail() {
+    return email;
+  }
+
+  public String getRole() {
+    return role;
+  }
+
+  public boolean isEmailVerified() {
+    return emailVerified;
+  }
 }
