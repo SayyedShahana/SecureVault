@@ -1,7 +1,5 @@
-
 package com.securevault.securevault.service;
 
-import com.securevault.securevault.constant.ApiMessages;
 import com.securevault.securevault.dto.RegisterRequest;
 import com.securevault.securevault.entity.Role;
 import com.securevault.securevault.entity.User;
@@ -35,16 +33,19 @@ public class UserService {
   }
 
   public User register(RegisterRequest request) {
+
     String email = request.getEmail().trim().toLowerCase(Locale.ROOT);
 
     if (userRepository.findByEmail(email).isPresent()) {
-      throw new IllegalArgumentException(ApiMessages.User.EMAIL_ALREADY_REGISTERED);
+      throw new IllegalArgumentException("Email is already registered");
     }
 
-    Role userRole = roleRepository
-        .findByRoleName(DEFAULT_ROLE_NAME)
-        .orElseThrow(
-            () -> new IllegalStateException("Default role USER not found in roles table"));
+    Role userRole =
+        roleRepository
+            .findByRoleName(DEFAULT_ROLE_NAME)
+            .orElseThrow(
+                () -> new IllegalStateException("Default role USER not found in roles table"));
+
     User user = new User();
     user.setFullName(request.getFullName().trim());
     user.setEmail(email);
