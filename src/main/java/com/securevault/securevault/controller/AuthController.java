@@ -2,7 +2,6 @@ package com.securevault.securevault.controller;
 
 import com.securevault.securevault.common.JsonFields;
 import com.securevault.securevault.common.MessageKeys;
-import com.securevault.securevault.constant.ApiMessages;
 import com.securevault.securevault.dto.ApiResponse;
 import com.securevault.securevault.dto.LoginRequest;
 import com.securevault.securevault.dto.RegisterRequest;
@@ -43,22 +42,14 @@ public class AuthController {
   @PostMapping("/register")
   public ResponseEntity<ApiResponse<UserResponse>> register(
       @Valid @RequestBody RegisterRequest request) {
-          User user = userService.register(request);
-                UserResponse userResponse = toUserResponse(user);
+    User user = userService.register(request);
+    UserResponse userResponse = UserResponse.from(user);
 
     ApiResponse<UserResponse> response =
         new ApiResponse<>(true, getMessage(MessageKeys.AUTH_REGISTER_SUCCESS), userResponse);
 
     return ResponseEntity.status(HttpStatus.CREATED).body(response);
   }
-  private UserResponse toUserResponse(User user) {
-                return new UserResponse(
-                                user.getId(),
-                                user.getFullName(),
-                                user.getEmail(),
-                                user.getRole().getRoleName(),
-                                user.isEmailVerified());
-        }
 
   @PostMapping("/login")
   public ResponseEntity<ApiResponse<Map<String, String>>> login(
