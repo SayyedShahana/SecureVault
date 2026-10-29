@@ -40,3 +40,5 @@ application-local.properties
 
 # Logs
 *.log
+# Private uploaded documents
+securevault-private-storage/

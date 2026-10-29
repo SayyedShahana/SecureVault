@@ -1,3 +1,4 @@
+
 package com.securevault.securevault.exception;
 
 import com.securevault.securevault.common.MessageKeys;
@@ -32,10 +33,11 @@ public class GlobalExceptionHandler {
       message = exceptionMessage;
     } else if (exceptionMessage != null
         && exceptionMessage.startsWith("Too many failed login attempts")) {
-      message = messageSource.getMessage(MessageKeys.AUTH_LOGIN_LOCKED, null, Locale.getDefault());
+      message = messageSource.getMessage(
+          MessageKeys.AUTH_LOGIN_LOCKED, null, Locale.getDefault());
     } else {
-      message =
-          messageSource.getMessage(MessageKeys.ERROR_INVALID_REQUEST, null, Locale.getDefault());
+      message = messageSource.getMessage(
+          MessageKeys.ERROR_INVALID_REQUEST, null, Locale.getDefault());
     }
 
     ApiResponse<Void> response = new ApiResponse<>(false, message, null);
@@ -43,19 +45,27 @@ public class GlobalExceptionHandler {
     return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
   }
 
+  @ExceptionHandler(DocumentNotFoundException.class)
+  public ResponseEntity<ApiResponse<Void>> handleDocumentNotFound(
+      DocumentNotFoundException exception) {
+
+    ApiResponse<Void> response =
+        new ApiResponse<>(false, exception.getMessage(), null);
+
+    return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+  }
+
   @ExceptionHandler(MethodArgumentNotValidException.class)
   public ResponseEntity<ApiResponse<Void>> handleValidationErrors(
       MethodArgumentNotValidException exception) {
 
-    String message =
-        exception.getBindingResult().getFieldErrors().stream()
-            .findFirst()
-            .map(error -> error.getDefaultMessage())
-            .filter(value -> value != null && !value.isBlank())
-            .orElseGet(
-                () ->
-                    messageSource.getMessage(
-                        MessageKeys.ERROR_INVALID_REQUEST, null, Locale.getDefault()));
+    String message = exception.getBindingResult().getFieldErrors().stream()
+        .findFirst()
+        .map(error -> error.getDefaultMessage())
+        .filter(value -> value != null && !value.isBlank())
+        .orElseGet(
+            () -> messageSource.getMessage(
+                MessageKeys.ERROR_INVALID_REQUEST, null, Locale.getDefault()));
 
     ApiResponse<Void> response = new ApiResponse<>(false, message, null);
 
@@ -64,9 +74,10 @@ public class GlobalExceptionHandler {
 
   @ExceptionHandler(Exception.class)
   public ResponseEntity<ApiResponse<Void>> handleGeneralException(Exception exception) {
+    logger.error("An unexpected error occurred while processing the request.", exception);
 
-    String message =
-        messageSource.getMessage(MessageKeys.ERROR_UNEXPECTED, null, Locale.getDefault());
+    String message = messageSource.getMessage(
+        MessageKeys.ERROR_UNEXPECTED, null, Locale.getDefault());
 
     ApiResponse<Void> response = new ApiResponse<>(false, message, null);
 
