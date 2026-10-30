@@ -6,12 +6,12 @@ import jakarta.validation.constraints.Size;
 
 public class LoginRequest {
 
-  @NotBlank(message = "Email is required")
-  @Email(message = "Please provide a valid email")
+  @NotBlank(message = "{auth.validation.email-required}")
+  @Email(message = "{auth.validation.email-invalid}")
   private String email;
 
-  @NotBlank(message = "Password is required")
-  @Size(max = 72, message = "Password must not exceed 72 characters")
+  @NotBlank(message = "{auth.validation.password-required}")
+  @Size(max = 72, message = "{auth.validation.password-too-long}")
   private String password;
 
   public LoginRequest() {}

@@ -1,4 +1,3 @@
-
 package com.securevault.securevault.exception;
 
 import com.securevault.securevault.common.MessageKeys;
@@ -12,12 +11,14 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-  private final MessageSource messageSource;
   private static final Logger logger = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
+  private final MessageSource messageSource;
 
   public GlobalExceptionHandler(MessageSource messageSource) {
     this.messageSource = messageSource;
@@ -29,58 +30,65 @@ public class GlobalExceptionHandler {
     String exceptionMessage = exception.getMessage();
     String message;
 
-    if ("Invalid email or password".equals(exceptionMessage)) {
-      message = exceptionMessage;
-    } else if (exceptionMessage != null
-        && exceptionMessage.startsWith("Too many failed login attempts")) {
-      message = messageSource.getMessage(
-          MessageKeys.AUTH_LOGIN_LOCKED, null, Locale.getDefault());
+    if (exceptionMessage == null || exceptionMessage.isBlank()) {
+      message = getMessage(MessageKeys.ERROR_INVALID_REQUEST);
+    } else if (exceptionMessage.equals(getMessage(MessageKeys.AUTH_LOGIN_INVALID_CREDENTIALS))) {
+      message = getMessage(MessageKeys.AUTH_LOGIN_INVALID_CREDENTIALS);
+    } else if (exceptionMessage.startsWith(getMessage(MessageKeys.AUTH_LOGIN_LOCKED))) {
+      message = getMessage(MessageKeys.AUTH_LOGIN_LOCKED);
     } else {
-      message = messageSource.getMessage(
-          MessageKeys.ERROR_INVALID_REQUEST, null, Locale.getDefault());
+      message = exceptionMessage;
     }
 
-    ApiResponse<Void> response = new ApiResponse<>(false, message, null);
-
-    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+    return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+        .body(new ApiResponse<>(false, message, null));
   }
 
   @ExceptionHandler(DocumentNotFoundException.class)
   public ResponseEntity<ApiResponse<Void>> handleDocumentNotFound(
       DocumentNotFoundException exception) {
 
-    ApiResponse<Void> response =
-        new ApiResponse<>(false, exception.getMessage(), null);
-
-    return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+    return ResponseEntity.status(HttpStatus.NOT_FOUND)
+        .body(new ApiResponse<>(false, exception.getMessage(), null));
   }
 
   @ExceptionHandler(MethodArgumentNotValidException.class)
   public ResponseEntity<ApiResponse<Void>> handleValidationErrors(
       MethodArgumentNotValidException exception) {
 
-    String message = exception.getBindingResult().getFieldErrors().stream()
-        .findFirst()
-        .map(error -> error.getDefaultMessage())
-        .filter(value -> value != null && !value.isBlank())
-        .orElseGet(
-            () -> messageSource.getMessage(
-                MessageKeys.ERROR_INVALID_REQUEST, null, Locale.getDefault()));
+    String message =
+        exception.getBindingResult().getFieldErrors().stream()
+            .findFirst()
+            .map(error -> error.getDefaultMessage())
+            .filter(value -> value != null && !value.isBlank())
+            .orElseGet(() -> getMessage(MessageKeys.ERROR_INVALID_REQUEST));
 
-    ApiResponse<Void> response = new ApiResponse<>(false, message, null);
+    return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+        .body(new ApiResponse<>(false, message, null));
+  }
 
-    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+  @ExceptionHandler(MaxUploadSizeExceededException.class)
+  public ResponseEntity<ApiResponse<Void>> handleMaxUploadSizeExceeded(
+      MaxUploadSizeExceededException exception) {
+
+    String message = getMessage(MessageKeys.ERROR_UPLOAD_SIZE_EXCEEDED);
+
+    return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE)
+        .body(new ApiResponse<>(false, message, null));
   }
 
   @ExceptionHandler(Exception.class)
   public ResponseEntity<ApiResponse<Void>> handleGeneralException(Exception exception) {
+
     logger.error("An unexpected error occurred while processing the request.", exception);
 
-    String message = messageSource.getMessage(
-        MessageKeys.ERROR_UNEXPECTED, null, Locale.getDefault());
+    String message = getMessage(MessageKeys.ERROR_UNEXPECTED);
 
-    ApiResponse<Void> response = new ApiResponse<>(false, message, null);
+    return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+        .body(new ApiResponse<>(false, message, null));
+  }
 
-    return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+  private String getMessage(String messageKey) {
+    return messageSource.getMessage(messageKey, null, Locale.getDefault());
   }
 }

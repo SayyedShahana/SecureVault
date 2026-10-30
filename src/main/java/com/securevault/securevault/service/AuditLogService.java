@@ -1,4 +1,3 @@
-
 package com.securevault.securevault.service;
 
 import com.securevault.securevault.entity.AuditLog;
@@ -11,14 +10,14 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class AuditLogService {
 
-    private final AuditLogRepository auditLogRepository;
+  private final AuditLogRepository auditLogRepository;
 
-    public AuditLogService(AuditLogRepository auditLogRepository) {
-        this.auditLogRepository = auditLogRepository;
-    }
+  public AuditLogService(AuditLogRepository auditLogRepository) {
+    this.auditLogRepository = auditLogRepository;
+  }
 
-    @Transactional(readOnly = true)
-    public List<AuditLog> getAllAuditLogs() {
-        return auditLogRepository.findAll(Sort.by(Sort.Direction.DESC, "createdAt"));
-    }
+  @Transactional(readOnly = true)
+  public List<AuditLog> getAllAuditLogs() {
+    return auditLogRepository.findAll(Sort.by(Sort.Direction.DESC, "createdAt"));
+  }
 }
