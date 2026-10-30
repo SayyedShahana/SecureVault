@@ -1,5 +1,6 @@
 package com.securevault.securevault.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.securevault.securevault.dto.LoginRequest;
 import com.securevault.securevault.entity.User;
 import com.securevault.securevault.entity.UserSession;
@@ -12,6 +13,8 @@ import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.time.OffsetDateTime;
 import java.util.Base64;
+import java.util.Locale;
+import java.util.Map;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,6 +31,8 @@ public class AuthService {
   private final UserSessionRepository userSessionRepository;
   private final LoginAttemptRepository loginAttemptRepository;
   private final LoginAttemptRecorder loginAttemptRecorder;
+  private final AuditLogRecorder auditLogRecorder;
+  private final ObjectMapper objectMapper;
   private final PasswordEncoder passwordEncoder;
   private final JwtService jwtService;
   private final SecureRandom secureRandom = new SecureRandom();
@@ -37,6 +42,8 @@ public class AuthService {
       UserSessionRepository userSessionRepository,
       LoginAttemptRepository loginAttemptRepository,
       LoginAttemptRecorder loginAttemptRecorder,
+      AuditLogRecorder auditLogRecorder,
+      ObjectMapper objectMapper,
       PasswordEncoder passwordEncoder,
       JwtService jwtService) {
 
@@ -44,6 +51,8 @@ public class AuthService {
     this.userSessionRepository = userSessionRepository;
     this.loginAttemptRepository = loginAttemptRepository;
     this.loginAttemptRecorder = loginAttemptRecorder;
+    this.auditLogRecorder = auditLogRecorder;
+    this.objectMapper = objectMapper;
     this.passwordEncoder = passwordEncoder;
     this.jwtService = jwtService;
   }
@@ -51,7 +60,7 @@ public class AuthService {
   @Transactional
   public LoginTokens login(LoginRequest request) {
 
-    String email = request.getEmail().trim().toLowerCase(java.util.Locale.ROOT);
+    String email = request.getEmail().trim().toLowerCase(Locale.ROOT);
 
     OffsetDateTime windowStart = OffsetDateTime.now().minusMinutes(LOCK_WINDOW_MINUTES);
 
@@ -70,6 +79,8 @@ public class AuthService {
 
       loginAttemptRecorder.record(email, false);
 
+      recordAudit(user != null ? user.getId() : null, "LOGIN", "FAILURE", email);
+
       throw new IllegalArgumentException("Invalid email or password");
     }
 
@@ -86,6 +97,8 @@ public class AuthService {
 
     userSessionRepository.save(session);
 
+    recordAudit(user.getId(), "LOGIN", "SUCCESS", email);
+
     return new LoginTokens(accessToken, refreshToken);
   }
 
@@ -98,10 +111,7 @@ public class AuthService {
 
     String tokenHash = hashToken(refreshToken);
 
-    UserSession session =
-        userSessionRepository
-            .findByRefreshTokenHash(tokenHash)
-            .orElseThrow(() -> new IllegalArgumentException("Invalid refresh token"));
+    UserSession session = findSessionByRefreshToken(tokenHash);
 
     if (session.getRevokedAt() != null || !session.getExpiresAt().isAfter(OffsetDateTime.now())) {
       throw new IllegalArgumentException("Refresh token has expired or been revoked");
@@ -130,14 +140,35 @@ public class AuthService {
 
     String tokenHash = hashToken(refreshToken);
 
-    UserSession session =
-        userSessionRepository
-            .findByRefreshTokenHash(tokenHash)
-            .orElseThrow(() -> new IllegalArgumentException("Invalid refresh token"));
+    UserSession session = findSessionByRefreshToken(tokenHash);
 
     if (session.getRevokedAt() == null) {
       session.setRevokedAt(OffsetDateTime.now());
       userSessionRepository.save(session);
+    }
+  }
+
+  private UserSession findSessionByRefreshToken(String tokenHash) {
+    return userSessionRepository
+        .findByRefreshTokenHash(tokenHash)
+        .orElseThrow(() -> new IllegalArgumentException("Invalid refresh token"));
+  }
+
+  private void recordAudit(Long userId, String action, String outcome, String email) {
+
+    try {
+      auditLogRecorder.record(
+          userId,
+          action,
+          "AUTHENTICATION",
+          null,
+          outcome,
+          null,
+          objectMapper.valueToTree(Map.of("email", email)));
+    } catch (RuntimeException ex) {
+      // Audit failures must be monitored; do not expose internal details to the
+      // client.
+      System.err.println("Failed to persist an authentication audit event.");
     }
   }
 
