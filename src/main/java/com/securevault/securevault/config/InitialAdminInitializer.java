@@ -42,7 +42,6 @@ public class InitialAdminInitializer implements ApplicationRunner {
   @Override
   @Transactional
   public void run(ApplicationArguments args) {
-
     boolean emailMissing = adminEmail == null || adminEmail.isBlank();
     boolean passwordMissing = adminPassword == null || adminPassword.isBlank();
 
@@ -68,11 +67,10 @@ public class InitialAdminInitializer implements ApplicationRunner {
       throw new IllegalStateException(getMessage(MessageKeys.ADMIN_EMAIL_ALREADY_REGISTERED));
     }
 
-    Role adminRole =
-        roleRepository
-            .findByRoleName("ADMIN")
-            .orElseThrow(
-                () -> new IllegalStateException(getMessage(MessageKeys.ADMIN_ROLE_NOT_FOUND)));
+    Role adminRole = roleRepository
+        .findByRoleName("ADMIN")
+        .orElseThrow(
+            () -> new IllegalStateException(getMessage(MessageKeys.ADMIN_ROLE_NOT_FOUND)));
 
     User admin = new User();
     admin.setFullName("SecureVault Administrator");
