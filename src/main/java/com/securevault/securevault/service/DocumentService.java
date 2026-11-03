@@ -2,13 +2,16 @@ package com.securevault.securevault.service;
 
 import com.securevault.securevault.common.MessageKeys;
 import com.securevault.securevault.entity.Document;
+import com.securevault.securevault.entity.DocumentShare;
 import com.securevault.securevault.entity.User;
 import com.securevault.securevault.exception.DocumentNotFoundException;
 import com.securevault.securevault.repository.DocumentRepository;
+import com.securevault.securevault.repository.DocumentShareRepository;
 import com.securevault.securevault.repository.UserRepository;
 import java.io.IOException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.time.OffsetDateTime;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Locale;
@@ -23,6 +26,7 @@ import org.springframework.web.multipart.MultipartFile;
 public class DocumentService {
 
   private final DocumentRepository documentRepository;
+  private final DocumentShareRepository documentShareRepository;
   private final UserRepository userRepository;
   private final DocumentValidationService validationService;
   private final FileStorageService fileStorageService;
@@ -30,11 +34,13 @@ public class DocumentService {
 
   public DocumentService(
       DocumentRepository documentRepository,
+      DocumentShareRepository documentShareRepository,
       UserRepository userRepository,
       DocumentValidationService validationService,
       FileStorageService fileStorageService,
       MessageSource messageSource) {
     this.documentRepository = documentRepository;
+    this.documentShareRepository = documentShareRepository;
     this.userRepository = userRepository;
     this.validationService = validationService;
     this.fileStorageService = fileStorageService;
@@ -78,35 +84,50 @@ public class DocumentService {
 
   @Transactional(readOnly = true)
   public Document getDocumentForDownload(String email, UUID documentId) {
-    User owner =
-        userRepository
-            .findByEmail(email)
-            .orElseThrow(
-                () ->
-                    new IllegalArgumentException(
-                        getMessage(MessageKeys.USER_AUTHENTICATED_NOT_FOUND)));
 
-    return documentRepository
-        .findByIdAndOwner_IdAndStatus(documentId, owner.getId(), "ACTIVE")
-        .orElseThrow(
-            () -> new DocumentNotFoundException(getMessage(MessageKeys.DOCUMENT_NOT_FOUND)));
+    User user = getAuthenticatedUser(email);
+
+    Document document = getActiveDocument(documentId);
+
+    boolean isOwner = document.getOwner().getId().equals(user.getId());
+
+    if (isOwner) {
+      return document;
+    }
+
+    DocumentShare share =
+        documentShareRepository
+            .findActiveShare(documentId, user.getId(), OffsetDateTime.now())
+            .orElseThrow(
+                () -> new DocumentNotFoundException(getMessage(MessageKeys.DOCUMENT_NOT_FOUND)));
+
+    if (!share.isCanView() || !share.isCanDownload()) {
+      throw new DocumentNotFoundException(getMessage(MessageKeys.DOCUMENT_NOT_FOUND));
+    }
+
+    return document;
   }
 
   @Transactional(readOnly = true)
   public Document getDocumentForPreview(String email, UUID documentId) {
-    User owner =
-        userRepository
-            .findByEmail(email)
-            .orElseThrow(
-                () ->
-                    new IllegalArgumentException(
-                        getMessage(MessageKeys.USER_AUTHENTICATED_NOT_FOUND)));
 
-    Document document =
-        documentRepository
-            .findByIdAndOwner_IdAndStatus(documentId, owner.getId(), "ACTIVE")
-            .orElseThrow(
-                () -> new DocumentNotFoundException(getMessage(MessageKeys.DOCUMENT_NOT_FOUND)));
+    User user = getAuthenticatedUser(email);
+
+    Document document = getActiveDocument(documentId);
+
+    boolean isOwner = document.getOwner().getId().equals(user.getId());
+
+    if (!isOwner) {
+      DocumentShare share =
+          documentShareRepository
+              .findActiveShare(documentId, user.getId(), OffsetDateTime.now())
+              .orElseThrow(
+                  () -> new DocumentNotFoundException(getMessage(MessageKeys.DOCUMENT_NOT_FOUND)));
+
+      if (!share.isCanView()) {
+        throw new DocumentNotFoundException(getMessage(MessageKeys.DOCUMENT_NOT_FOUND));
+      }
+    }
 
     if (!validationService.isPreviewSupported(document.getMimeType())) {
       throw new IllegalArgumentException(getMessage(MessageKeys.DOCUMENT_PREVIEW_UNSUPPORTED));
@@ -119,13 +140,7 @@ public class DocumentService {
   public List<Document> listDocuments(
       String email, String search, String mimeType, String sortBy, String direction) {
 
-    User owner =
-        userRepository
-            .findByEmail(email)
-            .orElseThrow(
-                () ->
-                    new IllegalArgumentException(
-                        getMessage(MessageKeys.USER_AUTHENTICATED_NOT_FOUND)));
+    User owner = getAuthenticatedUser(email);
 
     String normalizedSearch = search == null ? "" : search.trim();
     String normalizedMimeType = mimeType == null ? "" : mimeType.trim();
@@ -172,13 +187,8 @@ public class DocumentService {
 
   @Transactional
   public Document renameDocument(String email, UUID documentId, String newFileName) {
-    User owner =
-        userRepository
-            .findByEmail(email)
-            .orElseThrow(
-                () ->
-                    new IllegalArgumentException(
-                        getMessage(MessageKeys.USER_AUTHENTICATED_NOT_FOUND)));
+
+    User owner = getAuthenticatedUser(email);
 
     Document document =
         documentRepository
@@ -218,13 +228,8 @@ public class DocumentService {
 
   @Transactional
   public void deleteDocument(String email, UUID documentId) throws IOException {
-    User owner =
-        userRepository
-            .findByEmail(email)
-            .orElseThrow(
-                () ->
-                    new IllegalArgumentException(
-                        getMessage(MessageKeys.USER_AUTHENTICATED_NOT_FOUND)));
+
+    User owner = getAuthenticatedUser(email);
 
     Document document =
         documentRepository
@@ -237,6 +242,22 @@ public class DocumentService {
     document.setStatus("DELETED");
 
     documentRepository.save(document);
+  }
+
+  private User getAuthenticatedUser(String email) {
+    return userRepository
+        .findByEmail(email)
+        .orElseThrow(
+            () ->
+                new IllegalArgumentException(getMessage(MessageKeys.USER_AUTHENTICATED_NOT_FOUND)));
+  }
+
+  private Document getActiveDocument(UUID documentId) {
+    return documentRepository
+        .findById(documentId)
+        .filter(document -> "ACTIVE".equals(document.getStatus()))
+        .orElseThrow(
+            () -> new DocumentNotFoundException(getMessage(MessageKeys.DOCUMENT_NOT_FOUND)));
   }
 
   private String calculateSha256(MultipartFile file) throws IOException {

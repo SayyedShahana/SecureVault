@@ -4,8 +4,11 @@ import com.securevault.securevault.common.MessageKeys;
 import com.securevault.securevault.dto.ApiResponse;
 import com.securevault.securevault.dto.DocumentResponse;
 import com.securevault.securevault.dto.RenameDocumentRequest;
+import com.securevault.securevault.dto.ShareDocumentRequest;
+import com.securevault.securevault.dto.ShareDocumentResponse;
 import com.securevault.securevault.entity.Document;
 import com.securevault.securevault.service.DocumentService;
+import com.securevault.securevault.service.DocumentSharingService;
 import com.securevault.securevault.service.FileStorageService;
 import jakarta.validation.Valid;
 import java.io.FileNotFoundException;
@@ -41,14 +44,17 @@ import org.springframework.web.multipart.MultipartFile;
 public class DocumentController {
 
   private final DocumentService documentService;
+  private final DocumentSharingService documentSharingService;
   private final FileStorageService fileStorageService;
   private final MessageSource messageSource;
 
   public DocumentController(
       DocumentService documentService,
+      DocumentSharingService documentSharingService,
       FileStorageService fileStorageService,
       MessageSource messageSource) {
     this.documentService = documentService;
+    this.documentSharingService = documentSharingService;
     this.fileStorageService = fileStorageService;
     this.messageSource = messageSource;
   }
@@ -98,6 +104,57 @@ public class DocumentController {
             true,
             messageSource.getMessage(MessageKeys.DOCUMENT_LIST_SUCCESS, null, Locale.getDefault()),
             documents);
+
+    return ResponseEntity.ok(apiResponse);
+  }
+
+  @PostMapping("/{documentId}/share")
+  public ResponseEntity<ApiResponse<ShareDocumentResponse>> shareDocument(
+      @PathVariable UUID documentId,
+      @Valid @RequestBody ShareDocumentRequest request,
+      Authentication authentication) {
+
+    ShareDocumentResponse response =
+        documentSharingService.shareDocument(authentication.getName(), documentId, request);
+
+    ApiResponse<ShareDocumentResponse> apiResponse =
+        new ApiResponse<>(
+            true,
+            messageSource.getMessage(MessageKeys.DOCUMENT_SHARE_SUCCESS, null, Locale.getDefault()),
+            response);
+
+    return ResponseEntity.status(HttpStatus.CREATED).body(apiResponse);
+  }
+
+  @GetMapping("/shared-with-me")
+  public ResponseEntity<ApiResponse<List<ShareDocumentResponse>>> getSharedDocuments(
+      Authentication authentication) {
+
+    List<ShareDocumentResponse> shares =
+        documentSharingService.getSharedDocuments(authentication.getName());
+
+    ApiResponse<List<ShareDocumentResponse>> apiResponse =
+        new ApiResponse<>(
+            true,
+            messageSource.getMessage(
+                MessageKeys.DOCUMENT_SHARE_LIST_SUCCESS, null, Locale.getDefault()),
+            shares);
+
+    return ResponseEntity.ok(apiResponse);
+  }
+
+  @DeleteMapping("/{documentId}/shares/{shareId}")
+  public ResponseEntity<ApiResponse<Void>> revokeShare(
+      @PathVariable UUID documentId, @PathVariable UUID shareId, Authentication authentication) {
+
+    documentSharingService.revokeShare(authentication.getName(), documentId, shareId);
+
+    ApiResponse<Void> apiResponse =
+        new ApiResponse<>(
+            true,
+            messageSource.getMessage(
+                MessageKeys.DOCUMENT_SHARE_REVOKE_SUCCESS, null, Locale.getDefault()),
+            null);
 
     return ResponseEntity.ok(apiResponse);
   }

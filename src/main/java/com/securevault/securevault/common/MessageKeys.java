@@ -86,6 +86,23 @@ public final class MessageKeys {
   public static final String DOCUMENT_VALIDATION_CONTENT_MISMATCH =
       "document.validation.content-mismatch";
 
+  public static final String DOCUMENT_SHARE_EMAIL_REQUIRED = "document.share.email.required";
+  public static final String DOCUMENT_SHARE_EMAIL_INVALID = "document.share.email.invalid";
+  // Document sharing messages
+  public static final String DOCUMENT_SHARE_SUCCESS = "document.share.success";
+  public static final String DOCUMENT_SHARE_LIST_SUCCESS = "document.share.list.success";
+  public static final String DOCUMENT_SHARE_REVOKE_SUCCESS = "document.share.revoke.success";
+
+  public static final String DOCUMENT_SHARE_RECIPIENT_NOT_FOUND =
+      "document.share.recipient-not-found";
+  public static final String DOCUMENT_SHARE_SELF_NOT_ALLOWED = "document.share.self-not-allowed";
+  public static final String DOCUMENT_SHARE_ALREADY_EXISTS = "document.share.already-exists";
+  public static final String DOCUMENT_SHARE_PERMISSION_DENIED = "document.share.permission-denied";
+  public static final String DOCUMENT_SHARE_VIEW_DENIED = "document.share.view-denied";
+  public static final String DOCUMENT_SHARE_DOWNLOAD_DENIED = "document.share.download-denied";
+  public static final String DOCUMENT_SHARE_EXPIRY_INVALID = "document.share.expiry-invalid";
+  public static final String DOCUMENT_SHARE_NOT_FOUND = "document.share.not-found";
+
   // File storage
   public static final String STORAGE_DESTINATION_INVALID = "storage.destination.invalid";
   public static final String STORAGE_KEY_REQUIRED = "storage.key.required";
