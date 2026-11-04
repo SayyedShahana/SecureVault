@@ -3,6 +3,9 @@ package com.securevault.securevault.service;
 import com.securevault.securevault.common.MessageKeys;
 import com.securevault.securevault.entity.Document;
 import com.securevault.securevault.entity.DocumentShare;
+import com.securevault.securevault.util.PaginationUtil;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import com.securevault.securevault.entity.User;
 import com.securevault.securevault.exception.DocumentNotFoundException;
 import com.securevault.securevault.repository.DocumentRepository;
@@ -13,11 +16,9 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.OffsetDateTime;
 import java.util.HexFormat;
-import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
 import org.springframework.context.MessageSource;
-import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -51,13 +52,11 @@ public class DocumentService {
   public Document uploadDocument(String email, MultipartFile file) throws IOException {
     validationService.validate(file);
 
-    User owner =
-        userRepository
-            .findByEmail(email)
-            .orElseThrow(
-                () ->
-                    new IllegalArgumentException(
-                        getMessage(MessageKeys.USER_AUTHENTICATED_NOT_FOUND)));
+    User owner = userRepository
+        .findByEmail(email)
+        .orElseThrow(
+            () -> new IllegalArgumentException(
+                getMessage(MessageKeys.USER_AUTHENTICATED_NOT_FOUND)));
 
     UUID storageKey = fileStorageService.storeFile(file);
 
@@ -95,11 +94,10 @@ public class DocumentService {
       return document;
     }
 
-    DocumentShare share =
-        documentShareRepository
-            .findActiveShare(documentId, user.getId(), OffsetDateTime.now())
-            .orElseThrow(
-                () -> new DocumentNotFoundException(getMessage(MessageKeys.DOCUMENT_NOT_FOUND)));
+    DocumentShare share = documentShareRepository
+        .findActiveShare(documentId, user.getId(), OffsetDateTime.now())
+        .orElseThrow(
+            () -> new DocumentNotFoundException(getMessage(MessageKeys.DOCUMENT_NOT_FOUND)));
 
     if (!share.isCanView() || !share.isCanDownload()) {
       throw new DocumentNotFoundException(getMessage(MessageKeys.DOCUMENT_NOT_FOUND));
@@ -118,11 +116,10 @@ public class DocumentService {
     boolean isOwner = document.getOwner().getId().equals(user.getId());
 
     if (!isOwner) {
-      DocumentShare share =
-          documentShareRepository
-              .findActiveShare(documentId, user.getId(), OffsetDateTime.now())
-              .orElseThrow(
-                  () -> new DocumentNotFoundException(getMessage(MessageKeys.DOCUMENT_NOT_FOUND)));
+      DocumentShare share = documentShareRepository
+          .findActiveShare(documentId, user.getId(), OffsetDateTime.now())
+          .orElseThrow(
+              () -> new DocumentNotFoundException(getMessage(MessageKeys.DOCUMENT_NOT_FOUND)));
 
       if (!share.isCanView()) {
         throw new DocumentNotFoundException(getMessage(MessageKeys.DOCUMENT_NOT_FOUND));
@@ -137,8 +134,14 @@ public class DocumentService {
   }
 
   @Transactional(readOnly = true)
-  public List<Document> listDocuments(
-      String email, String search, String mimeType, String sortBy, String direction) {
+  public Page<Document> listDocuments(
+      String email,
+      String search,
+      String mimeType,
+      String sortBy,
+      String direction,
+      Integer page,
+      Integer size) {
 
     User owner = getAuthenticatedUser(email);
 
@@ -147,42 +150,53 @@ public class DocumentService {
 
     String normalizedSortBy = sortBy == null || sortBy.isBlank() ? "createdAt" : sortBy.trim();
 
-    if (!normalizedSortBy.equals("fileName") && !normalizedSortBy.equals("createdAt")) {
-      throw new IllegalArgumentException(getMessage(MessageKeys.DOCUMENT_SORT_INVALID_FIELD));
+    if (!normalizedSortBy.equals("fileName")
+        && !normalizedSortBy.equals("createdAt")) {
+      throw new IllegalArgumentException(
+          getMessage(MessageKeys.DOCUMENT_SORT_INVALID_FIELD));
     }
 
-    Sort.Direction sortDirection;
-
-    try {
-      sortDirection =
-          direction == null || direction.isBlank()
-              ? Sort.Direction.DESC
-              : Sort.Direction.fromString(direction.trim().toUpperCase(Locale.ROOT));
-    } catch (IllegalArgumentException ex) {
-      throw new IllegalArgumentException(getMessage(MessageKeys.DOCUMENT_SORT_INVALID_DIRECTION));
-    }
-
-    Sort sort = Sort.by(sortDirection, normalizedSortBy).and(Sort.by(Sort.Direction.ASC, "id"));
+    Pageable pageable = PaginationUtil.createPageable(
+        page,
+        size,
+        normalizedSortBy,
+        direction,
+        "createdAt",
+        messageSource);
 
     boolean hasSearch = !normalizedSearch.isEmpty();
     boolean hasMimeType = !normalizedMimeType.isEmpty();
 
     if (hasSearch && hasMimeType) {
-      return documentRepository.findByOwner_IdAndStatusAndFileNameContainingIgnoreCaseAndMimeType(
-          owner.getId(), "ACTIVE", normalizedSearch, normalizedMimeType, sort);
+      return documentRepository
+          .findByOwner_IdAndStatusAndFileNameContainingIgnoreCaseAndMimeType(
+              owner.getId(),
+              "ACTIVE",
+              normalizedSearch,
+              normalizedMimeType,
+              pageable);
     }
 
     if (hasSearch) {
-      return documentRepository.findByOwner_IdAndStatusAndFileNameContainingIgnoreCase(
-          owner.getId(), "ACTIVE", normalizedSearch, sort);
+      return documentRepository
+          .findByOwner_IdAndStatusAndFileNameContainingIgnoreCase(
+              owner.getId(),
+              "ACTIVE",
+              normalizedSearch,
+              pageable);
     }
 
     if (hasMimeType) {
-      return documentRepository.findByOwner_IdAndStatusAndMimeType(
-          owner.getId(), "ACTIVE", normalizedMimeType, sort);
+      return documentRepository
+          .findByOwner_IdAndStatusAndMimeType(
+              owner.getId(),
+              "ACTIVE",
+              normalizedMimeType,
+              pageable);
     }
 
-    return documentRepository.findByOwner_IdAndStatus(owner.getId(), "ACTIVE", sort);
+    return documentRepository.findByOwner_IdAndStatus(
+        owner.getId(), "ACTIVE", pageable);
   }
 
   @Transactional
@@ -190,11 +204,10 @@ public class DocumentService {
 
     User owner = getAuthenticatedUser(email);
 
-    Document document =
-        documentRepository
-            .findByIdAndOwner_IdAndStatus(documentId, owner.getId(), "ACTIVE")
-            .orElseThrow(
-                () -> new DocumentNotFoundException(getMessage(MessageKeys.DOCUMENT_NOT_FOUND)));
+    Document document = documentRepository
+        .findByIdAndOwner_IdAndStatus(documentId, owner.getId(), "ACTIVE")
+        .orElseThrow(
+            () -> new DocumentNotFoundException(getMessage(MessageKeys.DOCUMENT_NOT_FOUND)));
 
     if (newFileName == null || newFileName.isBlank()) {
       throw new IllegalArgumentException(getMessage(MessageKeys.DOCUMENT_RENAME_FILENAME_EMPTY));
@@ -231,11 +244,10 @@ public class DocumentService {
 
     User owner = getAuthenticatedUser(email);
 
-    Document document =
-        documentRepository
-            .findByIdAndOwner_IdAndStatus(documentId, owner.getId(), "ACTIVE")
-            .orElseThrow(
-                () -> new DocumentNotFoundException(getMessage(MessageKeys.DOCUMENT_NOT_FOUND)));
+    Document document = documentRepository
+        .findByIdAndOwner_IdAndStatus(documentId, owner.getId(), "ACTIVE")
+        .orElseThrow(
+            () -> new DocumentNotFoundException(getMessage(MessageKeys.DOCUMENT_NOT_FOUND)));
 
     fileStorageService.deleteFile(document.getStorageKey());
 
@@ -248,8 +260,7 @@ public class DocumentService {
     return userRepository
         .findByEmail(email)
         .orElseThrow(
-            () ->
-                new IllegalArgumentException(getMessage(MessageKeys.USER_AUTHENTICATED_NOT_FOUND)));
+            () -> new IllegalArgumentException(getMessage(MessageKeys.USER_AUTHENTICATED_NOT_FOUND)));
   }
 
   private Document getActiveDocument(UUID documentId) {
