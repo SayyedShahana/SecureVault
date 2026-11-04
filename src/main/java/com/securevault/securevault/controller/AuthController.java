@@ -45,8 +45,8 @@ public class AuthController {
     User user = userService.register(request);
     UserResponse userResponse = UserResponse.from(user);
 
-    ApiResponse<UserResponse> response =
-        new ApiResponse<>(true, getMessage(MessageKeys.AUTH_REGISTER_SUCCESS), userResponse);
+    ApiResponse<UserResponse> response = new ApiResponse<>(true, getMessage(MessageKeys.AUTH_REGISTER_SUCCESS),
+        userResponse);
 
     return ResponseEntity.status(HttpStatus.CREATED).body(response);
   }
@@ -57,13 +57,12 @@ public class AuthController {
 
     AuthService.LoginTokens tokens = authService.login(request);
 
-    ApiResponse<Map<String, String>> response =
-        new ApiResponse<>(
-            true,
-            getMessage(MessageKeys.AUTH_LOGIN_SUCCESS),
-            Map.of(
-                JsonFields.ACCESS_TOKEN, tokens.accessToken(),
-                JsonFields.REFRESH_TOKEN, tokens.refreshToken()));
+    ApiResponse<Map<String, String>> response = new ApiResponse<>(
+        true,
+        getMessage(MessageKeys.AUTH_LOGIN_SUCCESS),
+        Map.of(
+            JsonFields.ACCESS_TOKEN, tokens.accessToken(),
+            JsonFields.REFRESH_TOKEN, tokens.refreshToken()));
 
     return ResponseEntity.ok(response);
   }
@@ -74,13 +73,12 @@ public class AuthController {
 
     AuthService.LoginTokens tokens = authService.refresh(request.get(JsonFields.REFRESH_TOKEN));
 
-    ApiResponse<Map<String, String>> response =
-        new ApiResponse<>(
-            true,
-            getMessage(MessageKeys.AUTH_REFRESH_SUCCESS),
-            Map.of(
-                JsonFields.ACCESS_TOKEN, tokens.accessToken(),
-                JsonFields.REFRESH_TOKEN, tokens.refreshToken()));
+    ApiResponse<Map<String, String>> response = new ApiResponse<>(
+        true,
+        getMessage(MessageKeys.AUTH_REFRESH_SUCCESS),
+        Map.of(
+            JsonFields.ACCESS_TOKEN, tokens.accessToken(),
+            JsonFields.REFRESH_TOKEN, tokens.refreshToken()));
 
     return ResponseEntity.ok(response);
   }
@@ -90,11 +88,10 @@ public class AuthController {
 
     authService.logout(request.get(JsonFields.REFRESH_TOKEN));
 
-    ApiResponse<String> response =
-        new ApiResponse<>(
-            true,
-            getMessage(MessageKeys.AUTH_LOGOUT_SUCCESS),
-            getMessage(MessageKeys.AUTH_LOGOUT_SESSION_REVOKED));
+    ApiResponse<String> response = new ApiResponse<>(
+        true,
+        getMessage(MessageKeys.AUTH_LOGOUT_SUCCESS),
+        getMessage(MessageKeys.AUTH_LOGOUT_SESSION_REVOKED));
 
     return ResponseEntity.ok(response);
   }
