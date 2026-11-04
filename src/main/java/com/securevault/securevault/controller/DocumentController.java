@@ -3,6 +3,7 @@ package com.securevault.securevault.controller;
 import com.securevault.securevault.common.MessageKeys;
 import com.securevault.securevault.dto.ApiResponse;
 import com.securevault.securevault.dto.DocumentResponse;
+import com.securevault.securevault.dto.DocumentUploadResponse;
 import com.securevault.securevault.dto.RenameDocumentRequest;
 import com.securevault.securevault.dto.ShareDocumentRequest;
 import com.securevault.securevault.dto.ShareDocumentResponse;
@@ -65,15 +66,7 @@ public class DocumentController {
 
     Document document = documentService.uploadDocument(authentication.getName(), file);
 
-    DocumentUploadResponse response =
-        new DocumentUploadResponse(
-            document.getId(),
-            document.getFileName(),
-            document.getMimeType(),
-            document.getFileSizeBytes(),
-            document.getStatus(),
-            document.getCreatedAt());
-
+    DocumentUploadResponse response = DocumentUploadResponse.from(document);
     ApiResponse<DocumentUploadResponse> apiResponse =
         new ApiResponse<>(
             true,
@@ -96,7 +89,7 @@ public class DocumentController {
         documentService
             .listDocuments(authentication.getName(), search, mimeType, sortBy, direction)
             .stream()
-            .map(this::toDocumentResponse)
+            .map(DocumentResponse::from)
             .toList();
 
     ApiResponse<List<DocumentResponse>> apiResponse =
@@ -223,7 +216,7 @@ public class DocumentController {
     Document document =
         documentService.renameDocument(authentication.getName(), documentId, request.newFileName());
 
-    DocumentResponse response = toDocumentResponse(document);
+    DocumentResponse response = DocumentResponse.from(document);
 
     ApiResponse<DocumentResponse> apiResponse =
         new ApiResponse<>(
@@ -250,23 +243,4 @@ public class DocumentController {
 
     return ResponseEntity.ok(apiResponse);
   }
-
-  private DocumentResponse toDocumentResponse(Document document) {
-    return new DocumentResponse(
-        document.getId(),
-        document.getFileName(),
-        document.getMimeType(),
-        document.getFileSizeBytes(),
-        document.getStatus(),
-        document.getCreatedAt(),
-        document.getUpdatedAt());
-  }
-
-  public record DocumentUploadResponse(
-      UUID documentId,
-      String fileName,
-      String mimeType,
-      long fileSizeBytes,
-      String status,
-      java.time.OffsetDateTime createdAt) {}
 }
