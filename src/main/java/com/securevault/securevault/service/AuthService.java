@@ -1,6 +1,7 @@
 package com.securevault.securevault.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.securevault.securevault.common.MessageKeys;
 import com.securevault.securevault.dto.LoginRequest;
 import com.securevault.securevault.entity.User;
 import com.securevault.securevault.entity.UserSession;
@@ -15,12 +16,17 @@ import java.time.OffsetDateTime;
 import java.util.Base64;
 import java.util.Locale;
 import java.util.Map;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.context.MessageSource;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class AuthService {
+
+  private static final Logger logger = LoggerFactory.getLogger(AuthService.class);
 
   private static final int REFRESH_TOKEN_BYTES = 32;
   private static final long REFRESH_TOKEN_DAYS = 7;
@@ -35,6 +41,8 @@ public class AuthService {
   private final ObjectMapper objectMapper;
   private final PasswordEncoder passwordEncoder;
   private final JwtService jwtService;
+  private final MessageSource messageSource;
+
   private final SecureRandom secureRandom = new SecureRandom();
 
   public AuthService(
@@ -45,7 +53,8 @@ public class AuthService {
       AuditLogRecorder auditLogRecorder,
       ObjectMapper objectMapper,
       PasswordEncoder passwordEncoder,
-      JwtService jwtService) {
+      JwtService jwtService,
+      MessageSource messageSource) {
 
     this.userRepository = userRepository;
     this.userSessionRepository = userSessionRepository;
@@ -55,6 +64,7 @@ public class AuthService {
     this.objectMapper = objectMapper;
     this.passwordEncoder = passwordEncoder;
     this.jwtService = jwtService;
+    this.messageSource = messageSource;
   }
 
   @Transactional
@@ -69,8 +79,7 @@ public class AuthService {
             email, windowStart);
 
     if (failedAttempts >= MAX_FAILED_ATTEMPTS) {
-      throw new IllegalArgumentException(
-          "Too many failed login attempts. Try again after 15 minutes.");
+      throw new IllegalArgumentException(getMessage(MessageKeys.AUTH_LOGIN_LOCKED));
     }
 
     User user = userRepository.findByEmail(email).orElse(null);
@@ -81,7 +90,7 @@ public class AuthService {
 
       recordAudit(user != null ? user.getId() : null, "LOGIN", "FAILURE", email);
 
-      throw new IllegalArgumentException("Invalid email or password");
+      throw new IllegalArgumentException(getMessage(MessageKeys.AUTH_LOGIN_INVALID_CREDENTIALS));
     }
 
     loginAttemptRecorder.record(email, true);
@@ -106,15 +115,21 @@ public class AuthService {
   public LoginTokens refresh(String refreshToken) {
 
     if (refreshToken == null || refreshToken.isBlank()) {
-      throw new IllegalArgumentException("Refresh token is required");
+      throw new IllegalArgumentException(getMessage(MessageKeys.AUTH_REFRESH_TOKEN_REQUIRED));
     }
 
     String tokenHash = hashToken(refreshToken);
 
-    UserSession session = findSessionByRefreshToken(tokenHash);
+    UserSession session =
+        userSessionRepository
+            .findByRefreshTokenHash(tokenHash)
+            .orElseThrow(
+                () ->
+                    new IllegalArgumentException(
+                        getMessage(MessageKeys.AUTH_REFRESH_TOKEN_INVALID)));
 
     if (session.getRevokedAt() != null || !session.getExpiresAt().isAfter(OffsetDateTime.now())) {
-      throw new IllegalArgumentException("Refresh token has expired or been revoked");
+      throw new IllegalArgumentException(getMessage(MessageKeys.AUTH_REFRESH_TOKEN_EXPIRED));
     }
 
     User user = session.getUser();
@@ -135,23 +150,23 @@ public class AuthService {
   public void logout(String refreshToken) {
 
     if (refreshToken == null || refreshToken.isBlank()) {
-      throw new IllegalArgumentException("Refresh token is required");
+      throw new IllegalArgumentException(getMessage(MessageKeys.AUTH_REFRESH_TOKEN_REQUIRED));
     }
 
     String tokenHash = hashToken(refreshToken);
 
-    UserSession session = findSessionByRefreshToken(tokenHash);
+    UserSession session =
+        userSessionRepository
+            .findByRefreshTokenHash(tokenHash)
+            .orElseThrow(
+                () ->
+                    new IllegalArgumentException(
+                        getMessage(MessageKeys.AUTH_REFRESH_TOKEN_INVALID)));
 
     if (session.getRevokedAt() == null) {
       session.setRevokedAt(OffsetDateTime.now());
       userSessionRepository.save(session);
     }
-  }
-
-  private UserSession findSessionByRefreshToken(String tokenHash) {
-    return userSessionRepository
-        .findByRefreshTokenHash(tokenHash)
-        .orElseThrow(() -> new IllegalArgumentException("Invalid refresh token"));
   }
 
   private void recordAudit(Long userId, String action, String outcome, String email) {
@@ -165,10 +180,8 @@ public class AuthService {
           outcome,
           null,
           objectMapper.valueToTree(Map.of("email", email)));
-    } catch (RuntimeException ex) {
-      // Audit failures must be monitored; do not expose internal details to the
-      // client.
-      System.err.println("Failed to persist an authentication audit event.");
+    } catch (RuntimeException exception) {
+      logger.error("Failed to persist an authentication audit event.", exception);
     }
   }
 
@@ -187,9 +200,13 @@ public class AuthService {
 
       return Base64.getEncoder().encodeToString(hash);
 
-    } catch (NoSuchAlgorithmException ex) {
-      throw new IllegalStateException("SHA-256 is not available", ex);
+    } catch (NoSuchAlgorithmException exception) {
+      throw new IllegalStateException(getMessage(MessageKeys.CRYPTO_SHA256_UNAVAILABLE), exception);
     }
+  }
+
+  private String getMessage(String messageKey) {
+    return messageSource.getMessage(messageKey, null, Locale.getDefault());
   }
 
   public record LoginTokens(String accessToken, String refreshToken) {}
