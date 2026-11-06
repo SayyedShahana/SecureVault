@@ -21,6 +21,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.context.MessageSource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.securevault.securevault.dto.UpdateSharePermissionRequest;
 
 @Service
 public class DocumentSharingService {
@@ -53,31 +54,27 @@ public class DocumentSharingService {
   public ShareDocumentResponse shareDocument(
       String email, UUID documentId, ShareDocumentRequest request) {
 
-    User actor =
-        userRepository
-            .findByEmail(email)
-            .orElseThrow(
-                () ->
-                    new IllegalArgumentException(
-                        getMessage(MessageKeys.USER_AUTHENTICATED_NOT_FOUND)));
+    User actor = userRepository
+        .findByEmail(email)
+        .orElseThrow(
+            () -> new IllegalArgumentException(
+                getMessage(MessageKeys.USER_AUTHENTICATED_NOT_FOUND)));
 
-    Document document =
-        documentRepository
-            .findById(documentId)
-            .filter(doc -> "ACTIVE".equals(doc.getStatus()))
-            .orElseThrow(
-                () -> new DocumentNotFoundException(getMessage(MessageKeys.DOCUMENT_NOT_FOUND)));
+    Document document = documentRepository
+        .findById(documentId)
+        .filter(doc -> "ACTIVE".equals(doc.getStatus()))
+        .orElseThrow(
+            () -> new DocumentNotFoundException(getMessage(MessageKeys.DOCUMENT_NOT_FOUND)));
 
     boolean isOwner = document.getOwner().getId().equals(actor.getId());
 
     DocumentShare existingPermission = null;
 
     if (!isOwner) {
-      existingPermission =
-          documentShareRepository
-              .findActiveShare(documentId, actor.getId(), OffsetDateTime.now())
-              .orElseThrow(
-                  () -> new DocumentNotFoundException(getMessage(MessageKeys.DOCUMENT_NOT_FOUND)));
+      existingPermission = documentShareRepository
+          .findActiveShare(documentId, actor.getId(), OffsetDateTime.now())
+          .orElseThrow(
+              () -> new DocumentNotFoundException(getMessage(MessageKeys.DOCUMENT_NOT_FOUND)));
 
       if (!existingPermission.isCanShare()) {
         recordShareFailureAudit(actor, documentId, "USER_NOT_ALLOWED_TO_SHARE");
@@ -87,13 +84,11 @@ public class DocumentSharingService {
       }
     }
 
-    User recipient =
-        userRepository
-            .findByEmail(request.getEmail().trim().toLowerCase(Locale.ROOT))
-            .orElseThrow(
-                () ->
-                    new IllegalArgumentException(
-                        getMessage(MessageKeys.DOCUMENT_SHARE_RECIPIENT_NOT_FOUND)));
+    User recipient = userRepository
+        .findByEmail(request.getEmail().trim().toLowerCase(Locale.ROOT))
+        .orElseThrow(
+            () -> new IllegalArgumentException(
+                getMessage(MessageKeys.DOCUMENT_SHARE_RECIPIENT_NOT_FOUND)));
 
     if (recipient.getId().equals(actor.getId())) {
       throw new IllegalArgumentException(getMessage(MessageKeys.DOCUMENT_SHARE_SELF_NOT_ALLOWED));
@@ -123,8 +118,7 @@ public class DocumentSharingService {
       throw new IllegalArgumentException(getMessage(MessageKeys.DOCUMENT_SHARE_PERMISSION_DENIED));
     }
 
-    boolean alreadyShared =
-        documentShareRepository.findActiveShare(documentId, recipient.getId(), now).isPresent();
+    boolean alreadyShared = documentShareRepository.findActiveShare(documentId, recipient.getId(), now).isPresent();
 
     if (alreadyShared) {
       throw new IllegalArgumentException(getMessage(MessageKeys.DOCUMENT_SHARE_ALREADY_EXISTS));
@@ -149,38 +143,84 @@ public class DocumentSharingService {
   @Transactional(readOnly = true)
   public List<ShareDocumentResponse> getSharedDocuments(String email) {
 
-    User user =
-        userRepository
-            .findByEmail(email)
-            .orElseThrow(
-                () ->
-                    new IllegalArgumentException(
-                        getMessage(MessageKeys.USER_AUTHENTICATED_NOT_FOUND)));
+    User user = userRepository
+        .findByEmail(email)
+        .orElseThrow(
+            () -> new IllegalArgumentException(
+                getMessage(MessageKeys.USER_AUTHENTICATED_NOT_FOUND)));
 
-    List<DocumentShare> activeShares =
-        documentShareRepository.findActiveSharesForUser(user.getId(), OffsetDateTime.now());
+    List<DocumentShare> activeShares = documentShareRepository.findActiveSharesForUser(user.getId(),
+        OffsetDateTime.now());
+
+    return activeShares.stream().map(ShareDocumentResponse::from).toList();
+  }
+
+  @Transactional(readOnly = true)
+  public List<ShareDocumentResponse> getSharedByMe(String email) {
+
+    User user = userRepository
+        .findByEmail(email)
+        .orElseThrow(
+            () -> new IllegalArgumentException(
+                getMessage(MessageKeys.USER_AUTHENTICATED_NOT_FOUND)));
+
+    List<DocumentShare> activeShares = documentShareRepository.findActiveSharesByOwner(
+        user.getId(), OffsetDateTime.now());
 
     return activeShares.stream().map(ShareDocumentResponse::from).toList();
   }
 
   @Transactional
+  public ShareDocumentResponse updateSharePermission(
+      String email,
+      UUID documentId,
+      UUID shareId,
+      UpdateSharePermissionRequest request) {
+
+    User owner = userRepository
+        .findByEmail(email)
+        .orElseThrow(
+            () -> new IllegalArgumentException(
+                getMessage(MessageKeys.USER_AUTHENTICATED_NOT_FOUND)));
+
+    DocumentShare share = documentShareRepository
+        .findShareOwnedBy(shareId, documentId, owner.getId())
+        .orElseThrow(
+            () -> new DocumentNotFoundException(
+                getMessage(MessageKeys.DOCUMENT_SHARE_NOT_FOUND)));
+
+    if (share.getExpiresAt() != null
+        && !share.getExpiresAt().isAfter(OffsetDateTime.now())) {
+      throw new DocumentNotFoundException(
+          getMessage(MessageKeys.DOCUMENT_SHARE_NOT_FOUND));
+    }
+
+    // Update each permission independently.
+    share.setCanView(request.isCanView());
+    share.setCanDownload(request.isCanDownload());
+    share.setCanShare(request.isCanShare());
+
+    DocumentShare updatedShare = documentShareRepository.save(share);
+
+    recordPermissionUpdateAudit(owner, updatedShare);
+
+    return ShareDocumentResponse.from(updatedShare);
+  }
+
+  @Transactional
   public void revokeShare(String email, UUID documentId, UUID shareId) {
 
-    User owner =
-        userRepository
-            .findByEmail(email)
-            .orElseThrow(
-                () ->
-                    new IllegalArgumentException(
-                        getMessage(MessageKeys.USER_AUTHENTICATED_NOT_FOUND)));
+    User owner = userRepository
+        .findByEmail(email)
+        .orElseThrow(
+            () -> new IllegalArgumentException(
+                getMessage(MessageKeys.USER_AUTHENTICATED_NOT_FOUND)));
 
-    DocumentShare share =
-        documentShareRepository
-            .findShareOwnedBy(shareId, documentId, owner.getId())
-            .orElseThrow(
-                () ->
-                    new DocumentNotFoundException(
-                        getMessage(MessageKeys.DOCUMENT_SHARE_NOT_FOUND)));
+    DocumentShare share = documentShareRepository
+        .findShareOwnedBy(shareId, documentId, owner.getId())
+        .orElseThrow(
+            () -> new DocumentNotFoundException(
+                getMessage(MessageKeys.DOCUMENT_SHARE_NOT_FOUND)));
 
     share.setRevokedAt(OffsetDateTime.now());
 
@@ -223,6 +263,27 @@ public class DocumentSharingService {
                   "canShare", share.isCanShare())));
     } catch (RuntimeException exception) {
       logger.error("Failed to persist a document sharing audit event.", exception);
+    }
+  }
+
+  private void recordPermissionUpdateAudit(User actor, DocumentShare share) {
+    try {
+      auditLogRecorder.record(
+          actor.getId(),
+          "DOCUMENT_SHARE_PERMISSION_UPDATED",
+          "DOCUMENT",
+          share.getDocument().getId().toString(),
+          "SUCCESS",
+          null,
+          objectMapper.valueToTree(
+              Map.of(
+                  "shareId", share.getId().toString(),
+                  "recipientEmail", share.getSharedWith().getEmail(),
+                  "canView", share.isCanView(),
+                  "canDownload", share.isCanDownload(),
+                  "canShare", share.isCanShare())));
+    } catch (RuntimeException exception) {
+      logger.error("Failed to persist document share permission update audit event.", exception);
     }
   }
 

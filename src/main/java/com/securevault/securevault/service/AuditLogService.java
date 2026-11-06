@@ -20,4 +20,9 @@ public class AuditLogService {
   public List<AuditLog> getAllAuditLogs() {
     return auditLogRepository.findAll(Sort.by(Sort.Direction.DESC, "createdAt"));
   }
+
+  @Transactional(readOnly = true)
+  public List<AuditLog> getMyAuditLogs(Long actorUserId) {
+    return auditLogRepository.findByActorUserIdOrderByCreatedAtDesc(actorUserId);
+  }
 }

@@ -11,6 +11,7 @@ import com.securevault.securevault.entity.Document;
 import com.securevault.securevault.service.DocumentService;
 import com.securevault.securevault.service.DocumentSharingService;
 import com.securevault.securevault.dto.PageResponse;
+import com.securevault.securevault.dto.UpdateSharePermissionRequest;
 import org.springframework.data.domain.Page;
 import com.securevault.securevault.service.FileStorageService;
 import jakarta.validation.Valid;
@@ -46,199 +47,241 @@ import org.springframework.web.multipart.MultipartFile;
 @RequestMapping("/api/documents")
 public class DocumentController {
 
-    private final DocumentService documentService;
-    private final DocumentSharingService documentSharingService;
-    private final FileStorageService fileStorageService;
-    private final MessageSource messageSource;
+        private final DocumentService documentService;
+        private final DocumentSharingService documentSharingService;
+        private final FileStorageService fileStorageService;
+        private final MessageSource messageSource;
 
-    public DocumentController(
-            DocumentService documentService,
-            DocumentSharingService documentSharingService,
-            FileStorageService fileStorageService,
-            MessageSource messageSource) {
-        this.documentService = documentService;
-        this.documentSharingService = documentSharingService;
-        this.fileStorageService = fileStorageService;
-        this.messageSource = messageSource;
-    }
-
-    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<ApiResponse<DocumentUploadResponse>> uploadDocument(
-            @RequestPart("file") MultipartFile file, Authentication authentication) throws IOException {
-
-        Document document = documentService.uploadDocument(authentication.getName(), file);
-
-        DocumentUploadResponse response = DocumentUploadResponse.from(document);
-        ApiResponse<DocumentUploadResponse> apiResponse = new ApiResponse<>(
-                true,
-                messageSource.getMessage(
-                        MessageKeys.DOCUMENT_UPLOAD_SUCCESS, null, Locale.getDefault()),
-                response);
-
-        return ResponseEntity.status(HttpStatus.CREATED).body(apiResponse);
-    }
-
-    @GetMapping
-    public ResponseEntity<ApiResponse<PageResponse<DocumentResponse>>> getDocuments(
-            @RequestParam(required = false) String search,
-            @RequestParam(required = false) String mimeType,
-            @RequestParam(required = false) String sortBy,
-            @RequestParam(required = false) String direction,
-            @RequestParam(required = false) Integer page,
-            @RequestParam(required = false) Integer size,
-            Authentication authentication) {
-
-        Page<Document> documentPage = documentService.listDocuments(
-                authentication.getName(),
-                search,
-                mimeType,
-                sortBy,
-                direction,
-                page,
-                size);
-
-        PageResponse<DocumentResponse> response = new PageResponse<>(documentPage.map(DocumentResponse::from));
-
-        ApiResponse<PageResponse<DocumentResponse>> apiResponse = new ApiResponse<>(
-                true,
-                messageSource.getMessage(
-                        MessageKeys.DOCUMENT_LIST_SUCCESS, null, Locale.getDefault()),
-                response);
-
-        return ResponseEntity.ok(apiResponse);
-    }
-
-    @PostMapping("/{documentId}/share")
-    public ResponseEntity<ApiResponse<ShareDocumentResponse>> shareDocument(
-            @PathVariable UUID documentId,
-            @Valid @RequestBody ShareDocumentRequest request,
-            Authentication authentication) {
-
-        ShareDocumentResponse response = documentSharingService.shareDocument(authentication.getName(), documentId,
-                request);
-
-        ApiResponse<ShareDocumentResponse> apiResponse = new ApiResponse<>(
-                true,
-                messageSource.getMessage(MessageKeys.DOCUMENT_SHARE_SUCCESS, null, Locale.getDefault()),
-                response);
-
-        return ResponseEntity.status(HttpStatus.CREATED).body(apiResponse);
-    }
-
-    @GetMapping("/shared-with-me")
-    public ResponseEntity<ApiResponse<List<ShareDocumentResponse>>> getSharedDocuments(
-            Authentication authentication) {
-
-        List<ShareDocumentResponse> shares = documentSharingService.getSharedDocuments(authentication.getName());
-
-        ApiResponse<List<ShareDocumentResponse>> apiResponse = new ApiResponse<>(
-                true,
-                messageSource.getMessage(
-                        MessageKeys.DOCUMENT_SHARE_LIST_SUCCESS, null, Locale.getDefault()),
-                shares);
-
-        return ResponseEntity.ok(apiResponse);
-    }
-
-    @DeleteMapping("/{documentId}/shares/{shareId}")
-    public ResponseEntity<ApiResponse<Void>> revokeShare(
-            @PathVariable UUID documentId, @PathVariable UUID shareId, Authentication authentication) {
-
-        documentSharingService.revokeShare(authentication.getName(), documentId, shareId);
-
-        ApiResponse<Void> apiResponse = new ApiResponse<>(
-                true,
-                messageSource.getMessage(
-                        MessageKeys.DOCUMENT_SHARE_REVOKE_SUCCESS, null, Locale.getDefault()),
-                null);
-
-        return ResponseEntity.ok(apiResponse);
-    }
-
-    @GetMapping("/{documentId}/download")
-    public ResponseEntity<Resource> downloadDocument(
-            @PathVariable UUID documentId, Authentication authentication) throws IOException {
-
-        Document document = documentService.getDocumentForDownload(authentication.getName(), documentId);
-
-        Path filePath = fileStorageService.getFilePath(document.getStorageKey());
-
-        if (!Files.isRegularFile(filePath)) {
-            throw new FileNotFoundException(
-                    messageSource.getMessage(
-                            MessageKeys.DOCUMENT_STORAGE_UNAVAILABLE, null, Locale.getDefault()));
+        public DocumentController(
+                        DocumentService documentService,
+                        DocumentSharingService documentSharingService,
+                        FileStorageService fileStorageService,
+                        MessageSource messageSource) {
+                this.documentService = documentService;
+                this.documentSharingService = documentSharingService;
+                this.fileStorageService = fileStorageService;
+                this.messageSource = messageSource;
         }
 
-        Resource resource = new InputStreamResource(Files.newInputStream(filePath));
+        @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+        public ResponseEntity<ApiResponse<DocumentUploadResponse>> uploadDocument(
+                        @RequestPart("file") MultipartFile file, Authentication authentication) throws IOException {
 
-        ContentDisposition contentDisposition = ContentDisposition.attachment().filename(document.getFileName())
-                .build();
+                Document document = documentService.uploadDocument(authentication.getName(), file);
 
-        return ResponseEntity.ok()
-                .contentType(MediaType.parseMediaType(document.getMimeType()))
-                .contentLength(document.getFileSizeBytes())
-                .header(HttpHeaders.CONTENT_DISPOSITION, contentDisposition.toString())
-                .header("X-Content-Type-Options", "nosniff")
-                .body(resource);
-    }
+                DocumentUploadResponse response = DocumentUploadResponse.from(document);
+                ApiResponse<DocumentUploadResponse> apiResponse = new ApiResponse<>(
+                                true,
+                                messageSource.getMessage(
+                                                MessageKeys.DOCUMENT_UPLOAD_SUCCESS, null, Locale.getDefault()),
+                                response);
 
-    @GetMapping("/{documentId}/preview")
-    public ResponseEntity<Resource> previewDocument(
-            @PathVariable UUID documentId, Authentication authentication) throws IOException {
-
-        Document document = documentService.getDocumentForPreview(authentication.getName(), documentId);
-
-        Path filePath = fileStorageService.getFilePath(document.getStorageKey());
-
-        if (!Files.isRegularFile(filePath)) {
-            throw new FileNotFoundException(
-                    messageSource.getMessage(
-                            MessageKeys.DOCUMENT_STORAGE_UNAVAILABLE, null, Locale.getDefault()));
+                return ResponseEntity.status(HttpStatus.CREATED).body(apiResponse);
         }
 
-        Resource resource = new InputStreamResource(Files.newInputStream(filePath));
+        @GetMapping
+        public ResponseEntity<ApiResponse<PageResponse<DocumentResponse>>> getDocuments(
+                        @RequestParam(required = false) String search,
+                        @RequestParam(required = false) String mimeType,
+                        @RequestParam(required = false) String sortBy,
+                        @RequestParam(required = false) String direction,
+                        @RequestParam(required = false) Integer page,
+                        @RequestParam(required = false) Integer size,
+                        Authentication authentication) {
 
-        ContentDisposition contentDisposition = ContentDisposition.inline().filename(document.getFileName()).build();
+                Page<Document> documentPage = documentService.listDocuments(
+                                authentication.getName(),
+                                search,
+                                mimeType,
+                                sortBy,
+                                direction,
+                                page,
+                                size);
 
-        return ResponseEntity.ok()
-                .contentType(MediaType.parseMediaType(document.getMimeType()))
-                .contentLength(document.getFileSizeBytes())
-                .header(HttpHeaders.CONTENT_DISPOSITION, contentDisposition.toString())
-                .header("X-Content-Type-Options", "nosniff")
-                .body(resource);
-    }
+                PageResponse<DocumentResponse> response = new PageResponse<>(documentPage.map(DocumentResponse::from));
 
-    @PatchMapping("/{documentId}/rename")
-    public ResponseEntity<ApiResponse<DocumentResponse>> renameDocument(
-            @PathVariable UUID documentId,
-            @Valid @RequestBody RenameDocumentRequest request,
-            Authentication authentication) {
+                ApiResponse<PageResponse<DocumentResponse>> apiResponse = new ApiResponse<>(
+                                true,
+                                messageSource.getMessage(
+                                                MessageKeys.DOCUMENT_LIST_SUCCESS, null, Locale.getDefault()),
+                                response);
 
-        Document document = documentService.renameDocument(authentication.getName(), documentId, request.newFileName());
+                return ResponseEntity.ok(apiResponse);
+        }
 
-        DocumentResponse response = DocumentResponse.from(document);
+        @PostMapping("/{documentId}/share")
+        public ResponseEntity<ApiResponse<ShareDocumentResponse>> shareDocument(
+                        @PathVariable UUID documentId,
+                        @Valid @RequestBody ShareDocumentRequest request,
+                        Authentication authentication) {
 
-        ApiResponse<DocumentResponse> apiResponse = new ApiResponse<>(
-                true,
-                messageSource.getMessage(
-                        MessageKeys.DOCUMENT_RENAME_SUCCESS, null, Locale.getDefault()),
-                response);
+                ShareDocumentResponse response = documentSharingService.shareDocument(authentication.getName(),
+                                documentId,
+                                request);
 
-        return ResponseEntity.ok(apiResponse);
-    }
+                ApiResponse<ShareDocumentResponse> apiResponse = new ApiResponse<>(
+                                true,
+                                messageSource.getMessage(MessageKeys.DOCUMENT_SHARE_SUCCESS, null, Locale.getDefault()),
+                                response);
 
-    @DeleteMapping("/{documentId}")
-    public ResponseEntity<ApiResponse<Void>> deleteDocument(
-            @PathVariable UUID documentId, Authentication authentication) throws IOException {
+                return ResponseEntity.status(HttpStatus.CREATED).body(apiResponse);
+        }
 
-        documentService.deleteDocument(authentication.getName(), documentId);
+        @GetMapping("/shared-with-me")
+        public ResponseEntity<ApiResponse<List<ShareDocumentResponse>>> getSharedDocuments(
+                        Authentication authentication) {
 
-        ApiResponse<Void> apiResponse = new ApiResponse<>(
-                true,
-                messageSource.getMessage(
-                        MessageKeys.DOCUMENT_DELETE_SUCCESS, null, Locale.getDefault()),
-                null);
+                List<ShareDocumentResponse> shares = documentSharingService
+                                .getSharedDocuments(authentication.getName());
 
-        return ResponseEntity.ok(apiResponse);
-    }
+                ApiResponse<List<ShareDocumentResponse>> apiResponse = new ApiResponse<>(
+                                true,
+                                messageSource.getMessage(
+                                                MessageKeys.DOCUMENT_SHARE_LIST_SUCCESS, null, Locale.getDefault()),
+                                shares);
+
+                return ResponseEntity.ok(apiResponse);
+        }
+
+        @GetMapping("/shared-by-me")
+        public ResponseEntity<ApiResponse<List<ShareDocumentResponse>>> getSharedByMe(
+                        Authentication authentication) {
+
+                List<ShareDocumentResponse> shares = documentSharingService.getSharedByMe(authentication.getName());
+
+                ApiResponse<List<ShareDocumentResponse>> apiResponse = new ApiResponse<>(
+                                true,
+                                messageSource.getMessage(
+                                                MessageKeys.DOCUMENT_SHARE_LIST_SUCCESS, null, Locale.getDefault()),
+                                shares);
+
+                return ResponseEntity.ok(apiResponse);
+        }
+
+        @DeleteMapping("/{documentId}/shares/{shareId}")
+        public ResponseEntity<ApiResponse<Void>> revokeShare(
+                        @PathVariable UUID documentId, @PathVariable UUID shareId, Authentication authentication) {
+
+                documentSharingService.revokeShare(authentication.getName(), documentId, shareId);
+
+                ApiResponse<Void> apiResponse = new ApiResponse<>(
+                                true,
+                                messageSource.getMessage(
+                                                MessageKeys.DOCUMENT_SHARE_REVOKE_SUCCESS, null, Locale.getDefault()),
+                                null);
+
+                return ResponseEntity.ok(apiResponse);
+        }
+
+        @PatchMapping("/{documentId}/shares/{shareId}")
+        public ResponseEntity<ApiResponse<ShareDocumentResponse>> updateSharePermission(
+                        @PathVariable UUID documentId,
+                        @PathVariable UUID shareId,
+                        @Valid @RequestBody UpdateSharePermissionRequest request,
+                        Authentication authentication) {
+
+                ShareDocumentResponse response = documentSharingService.updateSharePermission(
+                                authentication.getName(), documentId, shareId, request);
+
+                ApiResponse<ShareDocumentResponse> apiResponse = new ApiResponse<>(
+                                true,
+                                messageSource.getMessage(
+                                                MessageKeys.DOCUMENT_SHARE_PERMISSION_UPDATE_SUCCESS,
+                                                null,
+                                                Locale.getDefault()),
+                                response);
+
+                return ResponseEntity.ok(apiResponse);
+        }
+
+        @GetMapping("/{documentId}/download")
+        public ResponseEntity<Resource> downloadDocument(
+                        @PathVariable UUID documentId, Authentication authentication) throws IOException {
+
+                Document document = documentService.getDocumentForDownload(authentication.getName(), documentId);
+
+                Path filePath = fileStorageService.getFilePath(document.getStorageKey());
+
+                if (!Files.isRegularFile(filePath)) {
+                        throw new FileNotFoundException(
+                                        messageSource.getMessage(
+                                                        MessageKeys.DOCUMENT_STORAGE_UNAVAILABLE, null,
+                                                        Locale.getDefault()));
+                }
+
+                Resource resource = new InputStreamResource(Files.newInputStream(filePath));
+
+                ContentDisposition contentDisposition = ContentDisposition.attachment().filename(document.getFileName())
+                                .build();
+
+                return ResponseEntity.ok()
+                                .contentType(MediaType.parseMediaType(document.getMimeType()))
+                                .contentLength(document.getFileSizeBytes())
+                                .header(HttpHeaders.CONTENT_DISPOSITION, contentDisposition.toString())
+                                .header("X-Content-Type-Options", "nosniff")
+                                .body(resource);
+        }
+
+        @GetMapping("/{documentId}/preview")
+        public ResponseEntity<Resource> previewDocument(
+                        @PathVariable UUID documentId, Authentication authentication) throws IOException {
+
+                Document document = documentService.getDocumentForPreview(authentication.getName(), documentId);
+
+                Path filePath = fileStorageService.getFilePath(document.getStorageKey());
+
+                if (!Files.isRegularFile(filePath)) {
+                        throw new FileNotFoundException(
+                                        messageSource.getMessage(
+                                                        MessageKeys.DOCUMENT_STORAGE_UNAVAILABLE, null,
+                                                        Locale.getDefault()));
+                }
+
+                Resource resource = new InputStreamResource(Files.newInputStream(filePath));
+
+                ContentDisposition contentDisposition = ContentDisposition.inline().filename(document.getFileName())
+                                .build();
+
+                return ResponseEntity.ok()
+                                .contentType(MediaType.parseMediaType(document.getMimeType()))
+                                .contentLength(document.getFileSizeBytes())
+                                .header(HttpHeaders.CONTENT_DISPOSITION, contentDisposition.toString())
+                                .header("X-Content-Type-Options", "nosniff")
+                                .body(resource);
+        }
+
+        @PatchMapping("/{documentId}/rename")
+        public ResponseEntity<ApiResponse<DocumentResponse>> renameDocument(
+                        @PathVariable UUID documentId,
+                        @Valid @RequestBody RenameDocumentRequest request,
+                        Authentication authentication) {
+
+                Document document = documentService.renameDocument(authentication.getName(), documentId,
+                                request.newFileName());
+
+                DocumentResponse response = DocumentResponse.from(document);
+
+                ApiResponse<DocumentResponse> apiResponse = new ApiResponse<>(
+                                true,
+                                messageSource.getMessage(
+                                                MessageKeys.DOCUMENT_RENAME_SUCCESS, null, Locale.getDefault()),
+                                response);
+
+                return ResponseEntity.ok(apiResponse);
+        }
+
+        @DeleteMapping("/{documentId}")
+        public ResponseEntity<ApiResponse<Void>> deleteDocument(
+                        @PathVariable UUID documentId, Authentication authentication) throws IOException {
+
+                documentService.deleteDocument(authentication.getName(), documentId);
+
+                ApiResponse<Void> apiResponse = new ApiResponse<>(
+                                true,
+                                messageSource.getMessage(
+                                                MessageKeys.DOCUMENT_DELETE_SUCCESS, null, Locale.getDefault()),
+                                null);
+
+                return ResponseEntity.ok(apiResponse);
+        }
 }

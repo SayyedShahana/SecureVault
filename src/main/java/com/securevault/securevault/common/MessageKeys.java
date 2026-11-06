@@ -98,6 +98,9 @@ public final class MessageKeys {
     public static final String DOCUMENT_SHARE_EXPIRY_INVALID = "document.share.expiry-invalid";
     public static final String DOCUMENT_SHARE_NOT_FOUND = "document.share.not-found";
 
+    public static final String DOCUMENT_SHARE_PERMISSION_UPDATE_SUCCESS = "document.share.permission-update.success";
+
+    public static final String DOCUMENT_SHARE_PERMISSION_INVALID = "document.share.permission-invalid";
     // File storage
     public static final String STORAGE_DESTINATION_INVALID = "storage.destination.invalid";
     public static final String STORAGE_KEY_REQUIRED = "storage.key.required";
@@ -117,6 +120,8 @@ public final class MessageKeys {
     public static final String AUTH_REFRESH_TOKEN_INVALID = "auth.refresh.token-invalid";
 
     public static final String AUTH_REFRESH_TOKEN_EXPIRED = "auth.refresh.token-expired";
+
+    public static final String USER_AUDIT_LOGS_SUCCESS = "user.audit.logs.success";
 
     private MessageKeys() {
     }
