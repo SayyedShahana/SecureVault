@@ -1,0 +1,114 @@
+.auth-submit-button {
+  width: 100%;
+  min-height: 46px;
+  margin-top: 8px;
+  border: none;
+  border-radius: 8px;
+  background-color: #173b68;
+  color: #ffffff;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.auth-submit-button:hover:not(:disabled) {
+  background-color: #102d50;
+}
+
+.auth-submit-button:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.form-error {
+  margin: 0 0 14px;
+  color: #c62828;
+  font-size: 13px;
+}
+
+.auth-switch-link {
+  margin-top: 20px;
+  color: #64748b;
+  font-size: 13px;
+  text-align: center;
+}
+
+.auth-switch-link a {
+  color: #1d5fa7;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.auth-switch-link a:hover {
+  text-decoration: underline;
+}
+
+.form-success {
+  margin: 0 0 16px;
+  padding: 12px;
+  border: 1px solid #b7dfc5;
+  border-radius: 8px;
+  background-color: #edf8f0;
+  color: #236b3b;
+  font-size: 13px;
+}
+
+.password-requirements {
+  margin: 10px 0 16px;
+  padding: 14px 16px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background-color: #f8fafc;
+}
+
+.password-requirements-title {
+  margin: 0 0 10px;
+  color: #334155;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.password-requirements-list {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 9px 12px;
+}
+
+.password-requirement {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: #64748b;
+  font-size: 12px;
+  transition: color 0.2s ease;
+}
+
+.password-requirement.valid {
+  color: #16803c;
+}
+
+.requirement-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 17px;
+  height: 17px;
+  flex-shrink: 0;
+  border: 1px solid #cbd5e1;
+  border-radius: 50%;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.password-requirement.valid .requirement-icon {
+  border-color: #16803c;
+  background-color: #dcfce7;
+  color: #16803c;
+}
+
+@media (max-width: 420px) {
+  .password-requirements-list {
+    grid-template-columns: 1fr;
+  }
+}

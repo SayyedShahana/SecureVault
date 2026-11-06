@@ -1,0 +1,277 @@
+
+/* ================================
+   Shared By Me Page
+================================ */
+
+.shared-by-me-page {
+  min-height: 100vh;
+  padding: 40px;
+  background: #f8fafc;
+  color: #1e293b;
+  box-sizing: border-box;
+}
+
+/* Header */
+
+.shared-by-me-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 28px;
+}
+
+.shared-by-me-header h1 {
+  font-size: 30px;
+  margin-bottom: 8px;
+}
+
+.shared-by-me-header p {
+  color: #64748b;
+  margin-bottom: 0;
+}
+
+/* Back Link */
+
+.shared-by-me-back {
+  display: inline-block;
+  color: #2563eb;
+  margin-bottom: 16px;
+  font-size: 14px;
+  text-decoration: none;
+}
+
+.shared-by-me-back:hover {
+  text-decoration: underline;
+}
+
+/* Summary */
+
+.shared-by-me-summary {
+  background: #ffffff;
+  padding: 20px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  margin-bottom: 20px;
+  color: #334155;
+}
+
+/* Table */
+
+.shared-by-me-table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+}
+
+.shared-by-me-table {
+  width: 100%;
+  min-width: 1250px;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.shared-by-me-table th,
+.shared-by-me-table td {
+  padding: 15px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.shared-by-me-table th {
+  background: #f1f5f9;
+  color: #475569;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.shared-by-me-table td {
+  font-size: 14px;
+  color: #334155;
+  overflow-wrap: anywhere;
+}
+
+.shared-by-me-table tbody tr:hover {
+  background: #f8fafc;
+}
+
+.shared-by-me-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* Permission Dropdown */
+
+.shared-by-me-permission {
+  min-width: 110px;
+  padding: 9px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 7px;
+  background: #ffffff;
+  color: #1e293b;
+  font-family: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  outline: none;
+}
+
+.shared-by-me-permission:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+.shared-by-me-permission:disabled {
+  background: #f1f5f9;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+/* Permission Description */
+
+.shared-by-me-permission-note {
+  display: block;
+  margin-top: 6px;
+  color: #64748b;
+  font-size: 11px;
+}
+
+/* Actions */
+
+.shared-by-me-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.shared-by-me-revoke-btn {
+  padding: 8px 12px;
+  border: none;
+  border-radius: 6px;
+  background: #dc2626;
+  color: #ffffff;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.shared-by-me-revoke-btn:hover:not(:disabled) {
+  background: #b91c1c;
+}
+
+.shared-by-me-revoke-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Loading and Empty State */
+
+.shared-by-me-message,
+.shared-by-me-empty {
+  text-align: center;
+  padding: 45px 20px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  color: #64748b;
+}
+
+.shared-by-me-empty h2 {
+  color: #1e293b;
+}
+
+.shared-by-me-empty a {
+  display: inline-block;
+  margin-top: 10px;
+  color: #2563eb;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.shared-by-me-empty a:hover {
+  text-decoration: underline;
+}
+
+/* Error Message */
+
+.shared-by-me-error {
+  color: #b91c1c;
+  background: #fee2e2;
+  padding: 12px;
+  border-radius: 7px;
+  margin-bottom: 16px;
+}
+
+/* Responsive */
+
+@media (max-width: 650px) {
+  .shared-by-me-page {
+    padding: 20px 14px;
+  }
+
+  .shared-by-me-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .shared-by-me-header h1 {
+    font-size: 26px;
+  }
+
+  .shared-by-me-table-wrapper {
+    border-radius: 8px;
+  }
+}
+
+/* Individual Permissions */
+
+.shared-by-me-permission-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 7px;
+  min-width: 105px;
+  font-size: 13px;
+}
+
+.shared-by-me-permission-item input {
+  width: 17px;
+  height: 17px;
+  accent-color: #1d4ed8;
+  cursor: pointer;
+}
+
+.shared-by-me-permission-item input:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.shared-by-me-permission-label {
+  font-weight: 600;
+  color: #334155;
+}
+
+.shared-by-me-status {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 5px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.shared-by-me-status.allowed {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.shared-by-me-status.not-allowed {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.shared-by-me-updating {
+  color: #64748b;
+  font-size: 11px;
+}
