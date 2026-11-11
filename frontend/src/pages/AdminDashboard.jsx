@@ -1,10 +1,11 @@
-
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { adminApi } from "../services/api";
 import { useAuth } from "../context/AuthContext";
 import "./Dashboard.css";
 import "../styles/AdminDashboard.css";
+
+const AUDIT_PAGE_SIZE = 10;
 
 function formatDate(dateValue) {
   if (!dateValue) return "N/A";
@@ -37,8 +38,28 @@ function AdminDashboard() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
 
+  const profileMenuRef = useRef(null);
+
   const [users, setUsers] = useState([]);
   const [auditLogs, setAuditLogs] = useState([]);
+  const [overviewAuditLogs, setOverviewAuditLogs] = useState([]);
+
+  const [auditSummary, setAuditSummary] = useState({
+    successfulEvents: 0,
+    failedEvents: 0,
+    totalAuditRecords: 0,
+  });
+
+  const [auditPage, setAuditPage] = useState(0);
+  const [auditTotalPages, setAuditTotalPages] = useState(0);
+  const [auditTotalElements, setAuditTotalElements] = useState(0);
+
+  const [loading, setLoading] = useState(true);
+  const [auditLoading, setAuditLoading] = useState(false);
+
+  const [userError, setUserError] = useState("");
+  const [auditError, setAuditError] = useState("");
+  const [error, setError] = useState("");
 
   const [activeTab, setActiveTab] = useState("overview");
 
@@ -46,60 +67,145 @@ function AdminDashboard() {
   const [auditSearch, setAuditSearch] = useState("");
   const [auditFilter, setAuditFilter] = useState("ALL");
 
-  const [loading, setLoading] = useState(true);
-  const [userError, setUserError] = useState("");
-  const [auditError, setAuditError] = useState("");
-  const [error, setError] = useState("");
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
 
+  // Close profile dropdown when clicking outside or pressing Escape.
+  useEffect(() => {
+    function handleOutsideClick(event) {
+      if (
+        profileMenuRef.current &&
+        !profileMenuRef.current.contains(event.target)
+      ) {
+        setProfileMenuOpen(false);
+      }
+    }
+
+    function handleEscape(event) {
+      if (event.key === "Escape") {
+        setProfileMenuOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handleOutsideClick);
+    document.addEventListener("keydown", handleEscape);
+
+    return () => {
+      document.removeEventListener("mousedown", handleOutsideClick);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, []);
+
+  // Load registered users.
   useEffect(() => {
     let isMounted = true;
 
-    async function fetchAdminData() {
+    async function fetchUsers() {
       setLoading(true);
-      setError("");
       setUserError("");
-      setAuditError("");
+      setError("");
 
-      const [usersResult, logsResult] = await Promise.allSettled([
-        adminApi.getUsers(),
-        adminApi.getAuditLogs(),
-      ]);
+      try {
+        const result = await adminApi.getUsers();
 
-      if (!isMounted) return;
-
-      if (usersResult.status === "fulfilled") {
-        setUsers(usersResult.value.data || []);
-      } else {
-        setUserError(
-          usersResult.reason?.message || "Unable to load users."
-        );
+        if (isMounted) {
+          setUsers(result?.data || []);
+        }
+      } catch (err) {
+        if (isMounted) {
+          setUserError(err.message || "Unable to load users.");
+          setError("Unable to load Admin Dashboard data.");
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
       }
-
-      if (logsResult.status === "fulfilled") {
-        setAuditLogs(logsResult.value.data || []);
-      } else {
-        setAuditError(
-          logsResult.reason?.message || "Unable to load audit logs."
-        );
-      }
-
-      if (
-        usersResult.status === "rejected" &&
-        logsResult.status === "rejected"
-      ) {
-        setError("Unable to load Admin Dashboard data.");
-      }
-
-      setLoading(false);
     }
 
-    fetchAdminData();
+    fetchUsers();
 
     return () => {
       isMounted = false;
     };
   }, []);
 
+  // Load paginated audit logs.
+  useEffect(() => {
+    let isMounted = true;
+
+    async function fetchAuditLogs() {
+      setAuditLoading(true);
+      setAuditError("");
+
+      try {
+        const result = await adminApi.getAuditLogs(
+          auditPage,
+          AUDIT_PAGE_SIZE
+        );
+
+        if (!isMounted) return;
+
+        // ApiResponse.data contains the Spring Page object.
+        const pageData = result?.data || {};
+        const records = pageData.content || [];
+
+        setAuditLogs(records);
+        setAuditTotalPages(pageData.totalPages || 0);
+        setAuditTotalElements(pageData.totalElements || 0);
+
+        // Keep the first page for dashboard recent activity.
+        if (auditPage === 0) {
+          setOverviewAuditLogs(records);
+        }
+      } catch (err) {
+        if (isMounted) {
+          setAuditError(err.message || "Unable to load audit logs.");
+          setAuditLogs([]);
+        }
+      } finally {
+        if (isMounted) {
+          setAuditLoading(false);
+        }
+      }
+    }
+
+    fetchAuditLogs();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [auditPage]);
+
+  // Load overall audit summary across all database records.
+  useEffect(() => {
+    let isMounted = true;
+
+    async function fetchAuditSummary() {
+      try {
+        const result = await adminApi.getAuditLogSummary();
+
+        if (isMounted) {
+          setAuditSummary(
+            result?.data || {
+              successfulEvents: 0,
+              failedEvents: 0,
+              totalAuditRecords: 0,
+            }
+          );
+        }
+      } catch (err) {
+        console.error("Unable to load audit summary:", err);
+      }
+    }
+
+    fetchAuditSummary();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  // Search registered users.
   const filteredUsers = useMemo(() => {
     const search = userSearch.trim().toLowerCase();
 
@@ -119,6 +225,7 @@ function AdminDashboard() {
     );
   }, [users, userSearch]);
 
+  // Search audit logs and filter by outcome.
   const filteredAuditLogs = useMemo(() => {
     const search = auditSearch.trim().toLowerCase();
 
@@ -140,7 +247,9 @@ function AdminDashboard() {
       const matchesSearch =
         !search ||
         searchableValues
-          .filter((value) => value !== null && value !== undefined)
+          .filter(
+            (value) => value !== null && value !== undefined
+          )
           .some((value) =>
             String(value).toLowerCase().includes(search)
           );
@@ -153,15 +262,7 @@ function AdminDashboard() {
     (item) => item.role?.toUpperCase() === "ADMIN"
   ).length;
 
-  const successCount = auditLogs.filter(
-    (log) => log.outcome?.toUpperCase() === "SUCCESS"
-  ).length;
-
-  const failureCount = auditLogs.filter(
-    (log) => log.outcome?.toUpperCase() === "FAILURE"
-  ).length;
-
-  const recentLogs = [...auditLogs]
+  const recentLogs = [...overviewAuditLogs]
     .sort(
       (a, b) =>
         new Date(b.createdAt || 0) -
@@ -169,7 +270,11 @@ function AdminDashboard() {
     )
     .slice(0, 5);
 
+  // Logout from the existing AuthContext.
   const handleLogout = async () => {
+    setProfileMenuOpen(false);
+    setError("");
+
     try {
       await logout();
       navigate("/login", { replace: true });
@@ -178,6 +283,7 @@ function AdminDashboard() {
     }
   };
 
+  // Reusable audit table.
   const renderAuditTable = (logs) => (
     <div className="dashboard-table-wrapper admin-table-wrapper">
       <table className="dashboard-table admin-table">
@@ -188,7 +294,7 @@ function AdminDashboard() {
             <th>User ID</th>
             <th>Outcome</th>
             <th>IP Address</th>
-            <th>Date & Time</th>
+            <th>Date &amp; Time</th>
           </tr>
         </thead>
 
@@ -208,6 +314,7 @@ function AdminDashboard() {
 
                 <td>
                   {log.resourceType || "N/A"}
+
                   {log.resourceId && (
                     <small className="admin-muted">
                       ID: {log.resourceId}
@@ -244,6 +351,7 @@ function AdminDashboard() {
 
   return (
     <div className="dashboard-layout admin-layout">
+      {/* SIDEBAR */}
       <aside className="dashboard-sidebar admin-sidebar">
         <Link to="/admin" className="dashboard-brand">
           <span className="dashboard-brand-icon">S</span>
@@ -252,6 +360,7 @@ function AdminDashboard() {
 
         <nav className="dashboard-nav admin-navigation">
           <button
+            type="button"
             className={activeTab === "overview" ? "active" : ""}
             onClick={() => setActiveTab("overview")}
           >
@@ -260,6 +369,7 @@ function AdminDashboard() {
           </button>
 
           <button
+            type="button"
             className={activeTab === "users" ? "active" : ""}
             onClick={() => setActiveTab("users")}
           >
@@ -268,6 +378,7 @@ function AdminDashboard() {
           </button>
 
           <button
+            type="button"
             className={activeTab === "audit" ? "active" : ""}
             onClick={() => setActiveTab("audit")}
           >
@@ -275,26 +386,9 @@ function AdminDashboard() {
             Audit Logs
           </button>
         </nav>
-
-        <div className="admin-sidebar-profile">
-          <div className="admin-avatar">
-            {getInitials(user?.email)}
-          </div>
-
-          <div className="admin-profile-info">
-            <strong>Administrator</strong>
-            <span>{user?.email || "Admin account"}</span>
-          </div>
-        </div>
-
-        <button
-          className="dashboard-logout"
-          onClick={handleLogout}
-        >
-          ↪ Logout
-        </button>
       </aside>
 
+      {/* MAIN CONTENT */}
       <main className="dashboard-main admin-main">
         <header className="dashboard-header">
           <div>
@@ -315,21 +409,77 @@ function AdminDashboard() {
             </p>
           </div>
 
-          <div className="admin-header-profile">
-            <div className="admin-avatar">
-              {getInitials(user?.email)}
-            </div>
-            <div>
-              <strong>Administrator</strong>
-              <span>ADMIN</span>
-            </div>
+          {/* ADMIN PROFILE DROPDOWN */}
+          <div
+            className="admin-profile-menu-wrapper"
+            ref={profileMenuRef}
+          >
+            <button
+              type="button"
+              className="admin-profile-trigger"
+              onClick={() =>
+                setProfileMenuOpen((current) => !current)
+              }
+              aria-expanded={profileMenuOpen}
+              aria-haspopup="true"
+              aria-label="Open administrator menu"
+            >
+              <div className="admin-avatar">
+                {getInitials(user?.email)}
+              </div>
+
+              <div className="admin-header-profile-text">
+                <strong>Administrator</strong>
+                <span>ADMIN</span>
+              </div>
+
+              <span
+                className={`admin-profile-chevron ${
+                  profileMenuOpen ? "open" : ""
+                }`}
+              >
+                ▾
+              </span>
+            </button>
+
+            {profileMenuOpen && (
+              <div className="admin-profile-dropdown">
+                <div className="admin-dropdown-account">
+                  <strong>Administrator</strong>
+                  <span>{user?.email || "Admin account"}</span>
+                </div>
+
+                <div className="admin-dropdown-divider" />
+
+                <button
+                  type="button"
+                  className="admin-dropdown-item"
+                  disabled
+                  title="Profile page is not available yet"
+                >
+                  <span>♙</span>
+                  My Profile
+                </button>
+
+                <button
+                  type="button"
+                  className="admin-dropdown-item admin-dropdown-logout"
+                  onClick={handleLogout}
+                >
+                  <span>↪</span>
+                  Logout
+                </button>
+              </div>
+            )}
           </div>
         </header>
 
         {error && (
           <div className="dashboard-error">
             {error}
+
             <button
+              type="button"
               className="admin-retry-button"
               onClick={() => window.location.reload()}
             >
@@ -344,6 +494,7 @@ function AdminDashboard() {
           </div>
         ) : (
           <>
+            {/* OVERVIEW */}
             {activeTab === "overview" && (
               <>
                 <section className="dashboard-stats admin-stats">
@@ -362,7 +513,7 @@ function AdminDashboard() {
                   <article className="dashboard-stat-card">
                     <div className="stat-icon">≡</div>
                     <p>Audit Events</p>
-                    <h2>{auditLogs.length}</h2>
+                    <h2>{auditTotalElements}</h2>
                   </article>
                 </section>
 
@@ -374,6 +525,7 @@ function AdminDashboard() {
                     </div>
 
                     <button
+                      type="button"
                       className="admin-text-button"
                       onClick={() => setActiveTab("audit")}
                     >
@@ -382,7 +534,13 @@ function AdminDashboard() {
                   </div>
 
                   {auditError ? (
-                    <p className="dashboard-error">{auditError}</p>
+                    <p className="dashboard-error">
+                      {auditError}
+                    </p>
+                  ) : auditLoading && overviewAuditLogs.length === 0 ? (
+                    <div className="admin-loading">
+                      Loading recent activity...
+                    </div>
                   ) : (
                     renderAuditTable(recentLogs)
                   )}
@@ -392,7 +550,9 @@ function AdminDashboard() {
                   <div className="dashboard-section-header">
                     <div>
                       <h2>Security Summary</h2>
-                      <p>Recorded audit outcomes</p>
+                      <p>
+                        Recorded outcomes across all audit records
+                      </p>
                     </div>
                   </div>
 
@@ -400,26 +560,27 @@ function AdminDashboard() {
                     <div className="admin-summary-item">
                       <span>Successful events</span>
                       <strong className="summary-success">
-                        {successCount}
+                        {auditSummary.successfulEvents}
                       </strong>
                     </div>
 
                     <div className="admin-summary-item">
                       <span>Failed events</span>
                       <strong className="summary-failure">
-                        {failureCount}
+                        {auditSummary.failedEvents}
                       </strong>
                     </div>
 
                     <div className="admin-summary-item">
                       <span>Total audit records</span>
-                      <strong>{auditLogs.length}</strong>
+                      <strong>{auditSummary.totalAuditRecords}</strong>
                     </div>
                   </div>
                 </section>
               </>
             )}
 
+            {/* USER MANAGEMENT */}
             {activeTab === "users" && (
               <section className="dashboard-recent">
                 <div className="dashboard-section-header admin-list-header">
@@ -457,7 +618,10 @@ function AdminDashboard() {
                       <tbody>
                         {filteredUsers.length === 0 ? (
                           <tr>
-                            <td colSpan="3" className="admin-empty-cell">
+                            <td
+                              colSpan="3"
+                              className="admin-empty-cell"
+                            >
                               No users found.
                             </td>
                           </tr>
@@ -500,13 +664,15 @@ function AdminDashboard() {
               </section>
             )}
 
+            {/* AUDIT LOGS */}
             {activeTab === "audit" && (
               <section className="dashboard-recent">
                 <div className="dashboard-section-header admin-list-header">
                   <div>
                     <h2>System Audit Logs</h2>
                     <p>
-                      {filteredAuditLogs.length} of {auditLogs.length} events
+                      {filteredAuditLogs.length} shown on this page,{" "}
+                      {auditTotalElements} total events
                     </p>
                   </div>
 
@@ -536,9 +702,57 @@ function AdminDashboard() {
                 </div>
 
                 {auditError ? (
-                  <p className="dashboard-error">{auditError}</p>
+                  <p className="dashboard-error">
+                    {auditError}
+                  </p>
+                ) : auditLoading ? (
+                  <div className="admin-loading">
+                    Loading audit logs...
+                  </div>
                 ) : (
-                  renderAuditTable(filteredAuditLogs)
+                  <>
+                    {renderAuditTable(filteredAuditLogs)}
+
+                    <div className="admin-pagination">
+                      <button
+                        type="button"
+                        className="admin-retry-button"
+                        onClick={() =>
+                          setAuditPage((current) =>
+                            Math.max(0, current - 1)
+                          )
+                        }
+                        disabled={auditPage <= 0}
+                      >
+                        Previous
+                      </button>
+
+                      <span>
+                        Page{" "}
+                        {auditTotalPages === 0 ? 0 : auditPage + 1}{" "}
+                        of {auditTotalPages}
+                      </span>
+
+                      <button
+                        type="button"
+                        className="admin-retry-button"
+                        onClick={() =>
+                          setAuditPage((current) =>
+                            Math.min(
+                              auditTotalPages - 1,
+                              current + 1
+                            )
+                          )
+                        }
+                        disabled={
+                          auditTotalPages === 0 ||
+                          auditPage >= auditTotalPages - 1
+                        }
+                      >
+                        Next
+                      </button>
+                    </div>
+                  </>
                 )}
               </section>
             )}

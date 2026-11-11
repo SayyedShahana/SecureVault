@@ -1,52 +1,197 @@
 
-.audit-logs-section {
-  margin-top: 30px;
-}
+  /* ================================
+    Audit Logs - Professional Design
+  ================================ */
 
-.audit-logs-table {
-  min-width: 1050px;
-}
-
-.audit-logs-table th,
-.audit-logs-table td {
-  padding: 16px;
-}
-
-.audit-resource-id {
-  max-width: 180px;
-  overflow-wrap: anywhere;
-  font-size: 12px;
-  color: #64748b !important;
-}
-
-.audit-details {
-  max-width: 280px;
-  overflow-wrap: anywhere;
-  font-size: 13px;
-  line-height: 1.5;
-}
-
-.audit-outcome {
-  display: inline-block;
-  padding: 5px 10px;
-  border-radius: 20px;
-  font-size: 11px;
-  font-weight: 700;
-  white-space: nowrap;
-}
-
-.audit-outcome-success {
-  color: #166534;
-  background: #dcfce7;
-}
-
-.audit-outcome-failed {
-  color: #b91c1c;
-  background: #fee2e2;
-}
-
-@media (max-width: 600px) {
   .audit-logs-section {
-    padding: 16px;
+    margin-top: 25px;
   }
-}
+
+  .audit-action-name {
+    font-weight: 600;
+    color: #173b68;
+  }
+
+  .audit-logs-table th,
+  .audit-logs-table td {
+    padding: 17px 15px;
+    vertical-align: middle;
+  }
+
+  .audit-view-details {
+    background: #edf4fc;
+    color: #173b68;
+    border: 1px solid #d5e3f3;
+    border-radius: 7px;
+    padding: 9px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.2s ease;
+    white-space: nowrap;
+  }
+
+  .audit-view-details:hover {
+    background: #173b68;
+    color: white;
+  }
+
+  /* ================================
+    Activity Details Modal
+  ================================ */
+
+  .audit-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.58);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    z-index: 9999;
+    overflow-y: auto;
+  }
+
+  .audit-details-modal {
+    background: #ffffff;
+    width: 100%;
+    max-width: 650px;
+    max-height: 85vh;
+    overflow-y: auto;
+    border-radius: 14px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+  }
+
+  .audit-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 24px;
+    border-bottom: 1px solid #e8edf3;
+  }
+
+  .audit-modal-header h2 {
+    margin: 0 0 7px;
+    color: #173b68;
+    font-size: 21px;
+  }
+
+  .audit-modal-header p {
+    margin: 0;
+    color: #64748b;
+    font-size: 13px;
+  }
+
+  .audit-modal-close {
+    background: #f1f5f9;
+    border: none;
+    border-radius: 7px;
+    width: 34px;
+    height: 34px;
+    font-size: 23px;
+    cursor: pointer;
+    color: #334155;
+  }
+
+  .audit-modal-content {
+    padding: 24px;
+  }
+
+  .audit-detail-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 20px;
+    padding: 13px 0;
+    border-bottom: 1px solid #edf0f4;
+  }
+
+  .audit-detail-row > span {
+    color: #64748b;
+    font-size: 13px;
+    min-width: 125px;
+  }
+
+  .audit-detail-row > strong {
+    color: #1e293b;
+    font-size: 13px;
+    text-align: right;
+    overflow-wrap: anywhere;
+  }
+
+  .audit-modal-content h3 {
+    color: #173b68;
+    font-size: 16px;
+    margin: 22px 0 12px;
+  }
+
+  .audit-modal-divider {
+    height: 1px;
+    background: #e8edf3;
+    margin-top: 22px;
+  }
+
+  .audit-detail-group {
+    background: #f8fafc;
+    border: 1px solid #e8edf3;
+    border-radius: 8px;
+    padding: 12px;
+    margin-top: 12px;
+  }
+
+  .audit-detail-group > strong {
+    display: block;
+    color: #173b68;
+    margin-bottom: 8px;
+    font-size: 13px;
+  }
+
+  .audit-modal-no-details {
+    color: #64748b;
+    font-size: 13px;
+  }
+
+  .audit-modal-footer {
+    padding: 16px 24px;
+    border-top: 1px solid #e8edf3;
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  .audit-modal-footer button {
+    background: #173b68;
+    color: white;
+    border: none;
+    padding: 10px 25px;
+    border-radius: 7px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .audit-modal-footer button:hover {
+    background: #102d50;
+  }
+
+  @media (max-width: 650px) {
+    .audit-modal-overlay {
+      padding: 12px;
+    }
+
+    .audit-details-modal {
+      max-height: 90vh;
+    }
+
+    .audit-modal-header,
+    .audit-modal-content {
+      padding: 17px;
+    }
+
+    .audit-detail-row {
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .audit-detail-row > strong {
+      text-align: left;
+    }
+  }

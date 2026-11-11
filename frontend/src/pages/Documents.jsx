@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { documentApi } from "../services/api";
@@ -93,12 +94,31 @@ function Documents() {
     setMimeType(value);
   };
 
-  // Sort documents
+  // Change sorting field
   const handleSortChange = (value) => {
     setPage(0);
     setSortBy(value);
+
+    // Default direction for the selected field
     setDirection(value === "createdAt" ? "desc" : "asc");
   };
+
+  // Toggle sorting direction using the arrow button
+  const handleDirectionToggle = () => {
+    setPage(0);
+    setDirection((current) =>
+      current === "asc" ? "desc" : "asc"
+    );
+  };
+
+  const sortDescription =
+    sortBy === "createdAt"
+      ? direction === "desc"
+        ? "Newest first"
+        : "Oldest first"
+      : direction === "asc"
+        ? "A to Z"
+        : "Z to A";
 
   // Download document
   const handleDownload = async (document) => {
@@ -285,7 +305,6 @@ function Documents() {
 
   return (
     <main className="documents-page">
-
       {/* Header */}
       <header className="documents-header">
         <div>
@@ -310,88 +329,85 @@ function Documents() {
         <strong>Total Documents: {totalElements}</strong>
       </section>
 
-    
-{/* Search, Filter and Sorting */}
-<section className="documents-toolbar">
+      {/* Search, Filter and Sorting */}
+      <section className="documents-toolbar">
+        {/* Search Documents */}
+        <div className="documents-toolbar-group">
+          <label htmlFor="documentSearch">Search Documents</label>
 
-  {/* Search Documents */}
-  <div className="documents-toolbar-group">
-    <label htmlFor="documentSearch">Search Documents</label>
+          <form onSubmit={handleSearch} className="documents-search">
+            <input
+              id="documentSearch"
+              type="search"
+              placeholder="Enter filename..."
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+            />
 
-    <form onSubmit={handleSearch} className="documents-search">
-      <input
-        id="documentSearch"
-        type="search"
-        placeholder="Enter filename..."
-        value={search}
-        onChange={(event) => setSearch(event.target.value)}
-      />
+            <button type="submit">Search</button>
+          </form>
+        </div>
 
-      <button type="submit">Search</button>
-    </form>
-  </div>
+        {/* Filter Documents */}
+        <div className="documents-toolbar-group">
+          <label htmlFor="documentFilter">Filter Documents</label>
 
-  {/* Filter Documents */}
-  <div className="documents-toolbar-group">
-    <label htmlFor="documentFilter">Filter Documents</label>
+          <select
+            id="documentFilter"
+            value={mimeType}
+            onChange={(event) =>
+              handleFilterChange(event.target.value)
+            }
+          >
+            <option value="">All file types</option>
+            <option value="application/pdf">PDF</option>
+            <option value="image/png">PNG</option>
+            <option value="image/jpeg">JPG / JPEG</option>
+            <option value="application/vnd.openxmlformats-officedocument.wordprocessingml.document">
+              DOCX
+            </option>
+            <option value="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
+              XLSX
+            </option>
+            <option value="text/plain">TXT</option>
+          </select>
+        </div>
 
-    <select
-      id="documentFilter"
-      value={mimeType}
-      onChange={(event) => handleFilterChange(event.target.value)}
-    >
-      <option value="">All file types</option>
-      <option value="application/pdf">PDF</option>
-      <option value="image/png">PNG</option>
-      <option value="image/jpeg">JPG / JPEG</option>
-      <option value="application/vnd.openxmlformats-officedocument.wordprocessingml.document">
-        DOCX
-      </option>
-      <option value="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
-        XLSX
-      </option>
-      <option value="text/plain">TXT</option>
-    </select>
-  </div>
+        {/* Sort Documents */}
+        <div className="documents-toolbar-group documents-sort-group">
+          <label htmlFor="documentSort">Sort Documents</label>
 
-  {/* Sort Documents */}
-  <div className="documents-toolbar-group documents-sort-group">
-    <label>Sort Documents</label>
+          <div className="documents-sort-controls">
+            <select
+              id="documentSort"
+              value={sortBy}
+              onChange={(event) =>
+                handleSortChange(event.target.value)
+              }
+              aria-label="Sort documents by"
+            >
+              <option value="createdAt">Upload Date</option>
+              <option value="fileName">File Name</option>
+            </select>
 
-    <div className="documents-sort-controls">
-      <select
-        value={sortBy}
-        onChange={(event) => handleSortChange(event.target.value)}
-        aria-label="Sort by"
-      >
-        <option value="createdAt">Upload Date</option>
-        <option value="fileName">File Name</option>
-      </select>
+            <button
+              type="button"
+              className="documents-sort-direction"
+              onClick={handleDirectionToggle}
+              aria-label={`Change sort direction. Current order: ${sortDescription}`}
+              title={`Current order: ${sortDescription}. Click to reverse.`}
+            >
+              <span aria-hidden="true">
+                {direction === "asc" ? "↑" : "↓"}
+              </span>
+            </button>
+          </div>
 
-      <select
-        value={direction}
-        onChange={(event) => {
-          setPage(0);
-          setDirection(event.target.value);
-        }}
-        aria-label="Sort order"
-      >
-        {sortBy === "createdAt" ? (
-          <>
-            <option value="desc">Newest First</option>
-            <option value="asc">Oldest First</option>
-          </>
-        ) : (
-          <>
-            <option value="asc">A to Z</option>
-            <option value="desc">Z to A</option>
-          </>
-        )}
-      </select>
-    </div>
-  </div>
-
-</section>
+          <span className="documents-sort-description">
+            {sortDescription}
+          </span>
+        </div>
+      </section>
 
       {/* Error Message */}
       {error && (
@@ -421,7 +437,6 @@ function Documents() {
         <>
           <div className="documents-table-wrapper">
             <table className="documents-table">
-
               <thead>
                 <tr>
                   <th>File Name</th>
@@ -436,7 +451,6 @@ function Documents() {
               <tbody>
                 {documents.map((document) => (
                   <tr key={document.documentId}>
-
                     <td>{document.fileName}</td>
                     <td>{document.mimeType}</td>
                     <td>{formatSize(document.fileSizeBytes)}</td>
@@ -445,7 +459,6 @@ function Documents() {
 
                     <td>
                       <div className="documents-actions">
-
                         <button
                           type="button"
                           onClick={() => openShareModal(document)}
@@ -481,20 +494,16 @@ function Documents() {
                         >
                           Delete
                         </button>
-
                       </div>
                     </td>
-
                   </tr>
                 ))}
               </tbody>
-
             </table>
           </div>
 
           {/* Pagination */}
           <div className="documents-pagination">
-
             <button
               type="button"
               disabled={page === 0}
@@ -518,7 +527,6 @@ function Documents() {
             >
               Next
             </button>
-
           </div>
         </>
       )}
@@ -526,14 +534,12 @@ function Documents() {
       {/* Share Document Modal */}
       {shareDocument && (
         <div className="share-modal-overlay">
-
           <section
             className="share-modal"
             role="dialog"
             aria-modal="true"
             aria-labelledby="share-modal-title"
           >
-
             <button
               type="button"
               className="share-modal-close"
@@ -544,14 +550,11 @@ function Documents() {
               ×
             </button>
 
-            <h2 id="share-modal-title">
-              Share Document
-            </h2>
+            <h2 id="share-modal-title">Share Document</h2>
 
             <p>{shareDocument.fileName}</p>
 
             <form onSubmit={handleShare}>
-
               <label htmlFor="shareEmail">
                 Recipient Email
               </label>
@@ -619,13 +622,10 @@ function Documents() {
               >
                 {sharing ? "Sharing..." : "Share Document"}
               </button>
-
             </form>
-
           </section>
         </div>
       )}
-
     </main>
   );
 }

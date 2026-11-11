@@ -58,6 +58,7 @@ function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [actionError, setActionError] = useState("");
+  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
 
   const [recentAuditLogs, setRecentAuditLogs] = useState([]);
   const [auditLogsLoading, setAuditLogsLoading] = useState(true);
@@ -150,12 +151,14 @@ function Dashboard() {
   }, []);
 
   const handleLogout = async () => {
-    try {
-      await logout();
-    } finally {
-      navigate("/login", { replace: true });
-    }
-  };
+  setIsProfileMenuOpen(false);
+
+  try {
+    await logout();
+  } finally {
+    navigate("/login", { replace: true });
+  }
+};
 
   // Open share modal
   const openShareModal = (share) => {
@@ -317,11 +320,6 @@ function Dashboard() {
     <span>▧</span> Activity History
   </Link>
 </nav>
-
-
-        <button className="dashboard-logout" onClick={handleLogout}>
-          ↪ Logout
-        </button>
       </aside>
 
       <main className="dashboard-main">
@@ -333,17 +331,50 @@ function Dashboard() {
           </div>
 
           <div className="dashboard-header-actions">
-            <div className="dashboard-user-profile">
-              <div className="dashboard-user-avatar">
-                {(user?.email || "U").charAt(0).toUpperCase()}
-              </div>
+           <div className="dashboard-profile-menu">
+  <button
+  type="button"
+  className="dashboard-user-profile"
+  onClick={() => {
+    console.log("Profile button clicked");
+    setIsProfileMenuOpen((previous) => {
+      console.log("Menu state:", !previous);
+      return !previous;
+    });
+  }}
+  aria-expanded={isProfileMenuOpen}
+>
+    <div className="dashboard-user-avatar">
+      {(user?.email || "U").charAt(0).toUpperCase()}
+    </div>
 
-              <div className="dashboard-user-info">
-                <strong>{user?.email || "User"}</strong>
-                <span>{role || user?.role || "USER"}</span>
-              </div>
-            </div>
+    <div className="dashboard-user-info">
+      <strong>{user?.email || "User"}</strong>
+      <span>{role || user?.role || "USER"}</span>
+    </div>
 
+    <span className="profile-dropdown-arrow">
+      {isProfileMenuOpen ? "⌃" : "⌄"}
+    </span>
+  </button>
+
+  {isProfileMenuOpen && (
+    <div className="dashboard-profile-dropdown">
+      <div className="profile-dropdown-info">
+        <strong>{user?.email || "User"}</strong>
+        <span>{role || user?.role || "USER"} Account</span>
+      </div>
+
+      <button
+        type="button"
+        className="profile-logout-button"
+        onClick={handleLogout}
+      >
+        ↪ Logout
+      </button>
+    </div>
+  )}
+</div>
             <Link
               to="/documents/upload"
               className="dashboard-upload-button"

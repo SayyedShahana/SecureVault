@@ -1,3 +1,4 @@
+
 import { Navigate, Route, Routes } from "react-router-dom";
 
 import Login from "./pages/Login";
@@ -7,15 +8,19 @@ import UploadDocument from "./pages/UploadDocument";
 import Documents from "./pages/Documents";
 import AdminDashboard from "./pages/AdminDashboard";
 import ProtectedRoute from "./components/ProtectedRoute";
+import PublicRoute from "./components/PublicRoute";
 import AuditLogs from "./pages/AuditLogs";
 import SharedByMe from "./pages/SharedByMe";
+
 function App() {
   return (
     <Routes>
       {/* Public routes */}
-      <Route path="/" element={<Navigate to="/login" replace />} />
-      <Route path="/login" element={<Login />} />
-      <Route path="/register" element={<Register />} />
+      <Route element={<PublicRoute />}>
+        <Route path="/" element={<Navigate to="/login" replace />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+      </Route>
 
       {/* USER routes */}
       <Route element={<ProtectedRoute allowedRoles={["USER"]} />}>
@@ -36,7 +41,7 @@ function App() {
       </Route>
 
       {/* Fallback route */}
-      <Route path="*" element={<Navigate to="/login" replace />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 }

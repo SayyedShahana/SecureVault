@@ -249,13 +249,16 @@ updateSharePermission: (documentId, shareId, permissionData) =>
   };
 
   export const adminApi = {
-    getUsers: () =>
-      apiRequest("/admin/users"),
+  getUsers: () =>
+    apiRequest("/admin/users"),
 
-    getAuditLogs: () =>
-      apiRequest("/admin/audit-logs"),
-  };
-  export const auditLogApi = {
-    getMyAuditLogs: () =>
-      apiRequest("/audit-logs/me"),
-  };
+  getAuditLogs: (page = 0, size = 10) =>
+    apiRequest(`/admin/audit-logs?page=${page}&size=${size}`),
+  getAuditLogSummary: () =>
+  apiRequest("/admin/audit-logs/summary"),
+};
+
+export const auditLogApi = {
+  getMyAuditLogs: (page = 0, size = 10) =>
+    apiRequest(`/audit-logs/me?page=${page}&size=${size}`),
+};
