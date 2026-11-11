@@ -74,9 +74,8 @@ public class AuthService {
 
     OffsetDateTime windowStart = OffsetDateTime.now().minusMinutes(LOCK_WINDOW_MINUTES);
 
-    long failedAttempts =
-        loginAttemptRepository.countByEmailAndSuccessfulFalseAndAttemptedAtAfter(
-            email, windowStart);
+    long failedAttempts = loginAttemptRepository.countByEmailAndSuccessfulFalseAndAttemptedAtAfter(
+        email, windowStart);
 
     if (failedAttempts >= MAX_FAILED_ATTEMPTS) {
       throw new IllegalArgumentException(getMessage(MessageKeys.AUTH_LOGIN_LOCKED));
@@ -120,13 +119,11 @@ public class AuthService {
 
     String tokenHash = hashToken(refreshToken);
 
-    UserSession session =
-        userSessionRepository
-            .findByRefreshTokenHash(tokenHash)
-            .orElseThrow(
-                () ->
-                    new IllegalArgumentException(
-                        getMessage(MessageKeys.AUTH_REFRESH_TOKEN_INVALID)));
+    UserSession session = userSessionRepository
+        .findByRefreshTokenHash(tokenHash)
+        .orElseThrow(
+            () -> new IllegalArgumentException(
+                getMessage(MessageKeys.AUTH_REFRESH_TOKEN_INVALID)));
 
     if (session.getRevokedAt() != null || !session.getExpiresAt().isAfter(OffsetDateTime.now())) {
       throw new IllegalArgumentException(getMessage(MessageKeys.AUTH_REFRESH_TOKEN_EXPIRED));
@@ -150,22 +147,25 @@ public class AuthService {
   public void logout(String refreshToken) {
 
     if (refreshToken == null || refreshToken.isBlank()) {
-      throw new IllegalArgumentException(getMessage(MessageKeys.AUTH_REFRESH_TOKEN_REQUIRED));
+      throw new IllegalArgumentException(
+          getMessage(MessageKeys.AUTH_REFRESH_TOKEN_REQUIRED));
     }
 
     String tokenHash = hashToken(refreshToken);
 
-    UserSession session =
-        userSessionRepository
-            .findByRefreshTokenHash(tokenHash)
-            .orElseThrow(
-                () ->
-                    new IllegalArgumentException(
-                        getMessage(MessageKeys.AUTH_REFRESH_TOKEN_INVALID)));
+    UserSession session = userSessionRepository
+        .findByRefreshTokenHash(tokenHash)
+        .orElseThrow(
+            () -> new IllegalArgumentException(
+                getMessage(MessageKeys.AUTH_REFRESH_TOKEN_INVALID)));
 
     if (session.getRevokedAt() == null) {
       session.setRevokedAt(OffsetDateTime.now());
       userSessionRepository.save(session);
+
+      User user = session.getUser();
+
+      recordAudit(user.getId(), "LOGOUT", "SUCCESS", user.getEmail());
     }
   }
 
@@ -209,5 +209,6 @@ public class AuthService {
     return messageSource.getMessage(messageKey, null, Locale.getDefault());
   }
 
-  public record LoginTokens(String accessToken, String refreshToken) {}
+  public record LoginTokens(String accessToken, String refreshToken) {
+  }
 }

@@ -1,3 +1,4 @@
+
 package com.securevault.securevault.controller;
 
 import com.securevault.securevault.common.MessageKeys;
@@ -9,10 +10,13 @@ import com.securevault.securevault.service.AuditLogService;
 import java.util.List;
 import java.util.Locale;
 import org.springframework.context.MessageSource;
+import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/admin")
@@ -23,7 +27,9 @@ public class AdminController {
   private final MessageSource messageSource;
 
   public AdminController(
-      UserRepository userRepository, AuditLogService auditLogService, MessageSource messageSource) {
+      UserRepository userRepository,
+      AuditLogService auditLogService,
+      MessageSource messageSource) {
     this.userRepository = userRepository;
     this.auditLogService = auditLogService;
     this.messageSource = messageSource;
@@ -32,27 +38,48 @@ public class AdminController {
   @GetMapping("/users")
   public ResponseEntity<ApiResponse<List<UserResponse>>> getAllUsers() {
 
-    List<UserResponse> users = userRepository.findAll().stream().map(UserResponse::from).toList();
+    List<UserResponse> users = userRepository.findAll()
+        .stream()
+        .map(UserResponse::from)
+        .toList();
 
-    String message =
-        messageSource.getMessage(MessageKeys.ADMIN_USERS_SUCCESS, null, Locale.getDefault());
+    String message = messageSource.getMessage(
+        MessageKeys.ADMIN_USERS_SUCCESS, null, Locale.getDefault());
 
-    ApiResponse<List<UserResponse>> response = new ApiResponse<>(true, message, users);
-
-    return ResponseEntity.ok(response);
+    return ResponseEntity.ok(new ApiResponse<>(true, message, users));
   }
 
   @GetMapping("/audit-logs")
-  public ResponseEntity<ApiResponse<List<AuditLogResponse>>> getAllAuditLogs() {
+  public ResponseEntity<ApiResponse<Page<AuditLogResponse>>> getAllAuditLogs(
+      @RequestParam(defaultValue = "0") int page,
+      @RequestParam(defaultValue = "10") int size) {
 
-    List<AuditLogResponse> auditLogs =
-        auditLogService.getAllAuditLogs().stream().map(AuditLogResponse::from).toList();
+    if (page < 0 || size < 1 || size > 100) {
+      throw new IllegalArgumentException("Invalid pagination parameters.");
+    }
 
-    String message =
-        messageSource.getMessage(MessageKeys.ADMIN_AUDIT_LOGS_SUCCESS, null, Locale.getDefault());
+    Page<AuditLogResponse> auditLogs = auditLogService
+        .getAllAuditLogs(page, size)
+        .map(AuditLogResponse::from);
 
-    ApiResponse<List<AuditLogResponse>> response = new ApiResponse<>(true, message, auditLogs);
+    String message = messageSource.getMessage(
+        MessageKeys.ADMIN_AUDIT_LOGS_SUCCESS, null, Locale.getDefault());
 
-    return ResponseEntity.ok(response);
+    return ResponseEntity.ok(
+        new ApiResponse<>(true, message, auditLogs));
+  }
+
+  @GetMapping("/audit-logs/summary")
+  public ResponseEntity<ApiResponse<Map<String, Long>>> getAuditLogSummary() {
+
+    Map<String, Long> summary = auditLogService.getAuditLogSummary();
+
+    String message = messageSource.getMessage(
+        MessageKeys.ADMIN_AUDIT_LOGS_SUCCESS,
+        null,
+        Locale.getDefault());
+
+    return ResponseEntity.ok(
+        new ApiResponse<>(true, message, summary));
   }
 }
