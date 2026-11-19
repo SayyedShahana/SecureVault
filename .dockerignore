@@ -1,0 +1,10 @@
+
+.git
+.vscode
+.mvn
+target
+frontend/node_modules
+frontend/dist
+securevault-private-storage
+.env
+.env.*
