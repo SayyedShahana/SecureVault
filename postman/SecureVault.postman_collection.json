@@ -1,0 +1,619 @@
+{
+  "auth": {
+    "type": "noauth"
+  },
+  "info": {
+    "_collection_link": "https://go.postman.co/collection/52617454-9ab7f07f-2cdd-4811-a46a-9c9a87122e48?source=collection_link",
+    "_exporter_id": "52617454",
+    "_postman_id": "9ab7f07f-2cdd-4811-a46a-9c9a87122e48",
+    "description": "# SecureVault API Collection\n\nThis collection contains REST API endpoints for the SecureVault application.\n\nSecureVault provides secure document management, authentication, document sharing, permission management, and audit logging.\n\n## Base URL\nhttp://localhost:8080\n\n## Authentication\nProtected endpoints require a valid JWT access token.\n\n## Main API Modules\n- User Registration and Login\n- Token Refresh and Logout\n- Document Upload, List, Search, Filter and Sort\n- Document Preview, Download, Rename and Delete\n- Document Sharing and Permission Management\n- Audit Logs\n- Admin APIs\n\nNote: Access to protected APIs is controlled by backend authentication and authorization.\n\n## Collection Variables\n- `baseUrl`: API base URL\n- `accessToken`: JWT access token for protected endpoints\n- `refreshToken`: refresh token for refresh/logout\n- `documentId` and `shareId`: IDs used by document and sharing requests\n- `recipientEmail`: email address of the share recipient\n- `newFileName`: filename used by the rename request\n- `searchTerm`: filename search text\n",
+    "name": "SecureVault",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Registered User",
+      "request": {
+        "body": {
+          "mode": "raw",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          },
+          "raw": "{\r\n  \"fullName\": \"Test User\",\r\n  \"email\": \"testuser@example.com\",\r\n  \"password\": \"ExamplePassword123!\"\r\n}"
+        },
+        "header": [],
+        "method": "POST",
+        "url": "{{baseUrl}}/api/auth/register"
+      },
+      "response": []
+    },
+    {
+      "name": "admin-Login",
+      "request": {
+        "body": {
+          "mode": "raw",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          },
+          "raw": "{\r\n  \"email\": \"admin@example.com\",\r\n  \"password\": \"ExampleAdminPassword123!\"\r\n}"
+        },
+        "header": [],
+        "method": "POST",
+        "url": "{{baseUrl}}/api/auth/login"
+      },
+      "response": []
+    },
+    {
+      "name": "User-Login",
+      "request": {
+        "body": {
+          "mode": "raw",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          },
+          "raw": "{\r\n  \"email\": \"testuser@example.com\",\r\n  \"password\": \"ExamplePassword123!\"\r\n}"
+        },
+        "header": [],
+        "method": "POST",
+        "url": "{{baseUrl}}/api/auth/login"
+      },
+      "response": []
+    },
+    {
+      "name": "user logs",
+      "request": {
+        "auth": {
+          "bearer": [
+            {
+              "key": "token",
+              "type": "string",
+              "value": "{{accessToken}}"
+            }
+          ],
+          "type": "bearer"
+        },
+        "header": [],
+        "method": "GET",
+        "url": "{{baseUrl}}/api/audit-logs/me"
+      },
+      "response": []
+    },
+    {
+      "name": "Shared by me",
+      "request": {
+        "auth": {
+          "bearer": [
+            {
+              "key": "token",
+              "type": "string",
+              "value": "{{accessToken}}"
+            }
+          ],
+          "type": "bearer"
+        },
+        "header": [],
+        "method": "GET",
+        "url": "{{baseUrl}}/api/documents/shared-by-me"
+      },
+      "response": []
+    },
+    {
+      "name": "change permission",
+      "request": {
+        "auth": {
+          "bearer": [
+            {
+              "key": "token",
+              "type": "string",
+              "value": "{{accessToken}}"
+            }
+          ],
+          "type": "bearer"
+        },
+        "body": {
+          "mode": "raw",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          },
+          "raw": "{\r\n    \"canView\": true,\r\n    \"canDownload\": true,\r\n    \"canShare\": false\r\n}"
+        },
+        "header": [],
+        "method": "PATCH",
+        "url": "{{baseUrl}}/api/documents/{{documentId}}/shares/{{shareId}}"
+      },
+      "response": []
+    },
+    {
+      "name": "permission Revoke",
+      "request": {
+        "auth": {
+          "bearer": [
+            {
+              "key": "token",
+              "type": "string",
+              "value": "{{accessToken}}"
+            }
+          ],
+          "type": "bearer"
+        },
+        "header": [],
+        "method": "DELETE",
+        "url": "{{baseUrl}}/api/documents/{{documentId}}/shares/{{shareId}}"
+      },
+      "response": []
+    },
+    {
+      "name": "Refresh token",
+      "request": {
+        "body": {
+          "mode": "raw",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          },
+          "raw": "{\r\n  \"refreshToken\": \"{{refreshToken}}\"\r\n}\r\n"
+        },
+        "header": [],
+        "method": "POST",
+        "url": "{{baseUrl}}/api/auth/refresh"
+      },
+      "response": []
+    },
+    {
+      "name": "document download",
+      "request": {
+        "auth": {
+          "bearer": [
+            {
+              "key": "token",
+              "type": "string",
+              "value": "{{accessToken}}"
+            }
+          ],
+          "type": "bearer"
+        },
+        "header": [],
+        "method": "GET",
+        "url": "{{baseUrl}}/api/documents/{{documentId}}/download"
+      },
+      "response": []
+    },
+    {
+      "name": "Share Document",
+      "request": {
+        "auth": {
+          "bearer": [
+            {
+              "key": "token",
+              "type": "string",
+              "value": "{{accessToken}}"
+            }
+          ],
+          "type": "bearer"
+        },
+        "body": {
+          "mode": "raw",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          },
+          "raw": "{\r\n  \"email\": \"{{recipientEmail}}\",\r\n  \"canView\": true,\r\n  \"canDownload\": true,\r\n  \"canShare\": false,\r\n  \"expiresAt\": null\r\n}"
+        },
+        "header": [],
+        "method": "POST",
+        "url": "{{baseUrl}}/api/documents/{{documentId}}/share"
+      },
+      "response": []
+    },
+    {
+      "name": "Shared with me (alternate request)",
+      "request": {
+        "auth": {
+          "bearer": [
+            {
+              "key": "token",
+              "type": "string",
+              "value": "{{accessToken}}"
+            }
+          ],
+          "type": "bearer"
+        },
+        "header": [],
+        "method": "GET",
+        "url": "{{baseUrl}}/api/documents/shared-with-me"
+      },
+      "response": []
+    },
+    {
+      "name": "Preview document",
+      "request": {
+        "auth": {
+          "bearer": [
+            {
+              "key": "token",
+              "type": "string",
+              "value": "{{accessToken}}"
+            }
+          ],
+          "type": "bearer"
+        },
+        "header": [],
+        "method": "GET",
+        "url": "{{baseUrl}}/api/documents/{{documentId}}/preview"
+      },
+      "response": []
+    },
+    {
+      "name": "Delete Document",
+      "request": {
+        "auth": {
+          "bearer": [
+            {
+              "key": "token",
+              "type": "string",
+              "value": "{{accessToken}}"
+            }
+          ],
+          "type": "bearer"
+        },
+        "header": [],
+        "method": "DELETE",
+        "url": "{{baseUrl}}/api/documents/{{documentId}}"
+      },
+      "response": []
+    },
+    {
+      "name": "Revoke Share document",
+      "request": {
+        "auth": {
+          "bearer": [
+            {
+              "key": "token",
+              "type": "string",
+              "value": "{{accessToken}}"
+            }
+          ],
+          "type": "bearer"
+        },
+        "header": [],
+        "method": "DELETE",
+        "url": "{{baseUrl}}/api/documents/{{documentId}}/shares/{{shareId}}"
+      },
+      "response": []
+    },
+    {
+      "name": "Rename Document",
+      "request": {
+        "auth": {
+          "bearer": [
+            {
+              "key": "token",
+              "type": "string",
+              "value": "{{accessToken}}"
+            }
+          ],
+          "type": "bearer"
+        },
+        "body": {
+          "mode": "raw",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          },
+          "raw": "{\r\n  \"newFileName\": \"{{newFileName}}\"\r\n}"
+        },
+        "header": [],
+        "method": "PATCH",
+        "url": "{{baseUrl}}/api/documents/{{documentId}}/rename"
+      },
+      "response": []
+    },
+    {
+      "name": "List document",
+      "request": {
+        "auth": {
+          "bearer": [
+            {
+              "key": "token",
+              "type": "string",
+              "value": "{{accessToken}}"
+            }
+          ],
+          "type": "bearer"
+        },
+        "header": [],
+        "method": "GET",
+        "url": "{{baseUrl}}/api/documents"
+      },
+      "response": []
+    },
+    {
+      "name": "Search document",
+      "request": {
+        "auth": {
+          "bearer": [
+            {
+              "key": "token",
+              "type": "string",
+              "value": "{{accessToken}}"
+            }
+          ],
+          "type": "bearer"
+        },
+        "header": [],
+        "method": "GET",
+        "url": "{{baseUrl}}/api/documents?search={{searchTerm}}"
+      },
+      "response": []
+    },
+    {
+      "name": "Filter Document",
+      "request": {
+        "auth": {
+          "bearer": [
+            {
+              "key": "token",
+              "type": "string",
+              "value": "{{accessToken}}"
+            }
+          ],
+          "type": "bearer"
+        },
+        "header": [],
+        "method": "GET",
+        "url": "{{baseUrl}}/api/documents?mimeType=application/pdf"
+      },
+      "response": []
+    },
+    {
+      "name": "Sort document",
+      "request": {
+        "auth": {
+          "bearer": [
+            {
+              "key": "token",
+              "type": "string",
+              "value": "{{accessToken}}"
+            }
+          ],
+          "type": "bearer"
+        },
+        "header": [],
+        "method": "GET",
+        "url": "{{baseUrl}}/api/documents?sortBy=fileName&direction=DESC"
+      },
+      "response": []
+    },
+    {
+      "name": "Document upload",
+      "request": {
+        "auth": {
+          "bearer": [
+            {
+              "key": "token",
+              "type": "string",
+              "value": "{{accessToken}}"
+            }
+          ],
+          "type": "bearer"
+        },
+        "body": {
+          "formdata": [
+            {
+              "key": "file",
+              "src": "",
+              "type": "file"
+            }
+          ],
+          "mode": "formdata"
+        },
+        "header": [],
+        "method": "POST",
+        "url": "{{baseUrl}}/api/documents"
+      },
+      "response": []
+    },
+    {
+      "name": "Preview get document",
+      "request": {
+        "auth": {
+          "bearer": [
+            {
+              "key": "token",
+              "type": "string",
+              "value": "{{accessToken}}"
+            }
+          ],
+          "type": "bearer"
+        },
+        "header": [],
+        "method": "GET",
+        "url": "{{baseUrl}}/api/documents/{{documentId}}/preview"
+      },
+      "response": []
+    },
+    {
+      "name": "Download Permission GET Document",
+      "request": {
+        "auth": {
+          "bearer": [
+            {
+              "key": "token",
+              "type": "string",
+              "value": "{{accessToken}}"
+            }
+          ],
+          "type": "bearer"
+        },
+        "header": [],
+        "method": "GET",
+        "url": "{{baseUrl}}/api/documents/{{documentId}}/download"
+      },
+      "response": []
+    },
+    {
+      "name": "Shared with me",
+      "request": {
+        "auth": {
+          "bearer": [
+            {
+              "key": "token",
+              "type": "string",
+              "value": "{{accessToken}}"
+            }
+          ],
+          "type": "bearer"
+        },
+        "header": [],
+        "method": "GET",
+        "url": "{{baseUrl}}/api/documents/shared-with-me"
+      },
+      "response": []
+    },
+    {
+      "name": "Admin-user",
+      "request": {
+        "auth": {
+          "bearer": [
+            {
+              "key": "token",
+              "type": "string",
+              "value": "{{accessToken}}"
+            }
+          ],
+          "type": "bearer"
+        },
+        "header": [],
+        "method": "GET",
+        "url": "{{baseUrl}}/api/admin/users"
+      },
+      "response": []
+    },
+    {
+      "name": "Admin Audit Logs API",
+      "request": {
+        "auth": {
+          "bearer": [
+            {
+              "key": "token",
+              "type": "string",
+              "value": "{{accessToken}}"
+            }
+          ],
+          "type": "bearer"
+        },
+        "header": [],
+        "method": "GET",
+        "url": "{{baseUrl}}/api/admin/audit-logs"
+      },
+      "response": []
+    },
+    {
+      "name": "Audit-logs",
+      "request": {
+        "auth": {
+          "bearer": [
+            {
+              "key": "token",
+              "type": "string",
+              "value": "{{accessToken}}"
+            }
+          ],
+          "type": "bearer"
+        },
+        "header": [],
+        "method": "GET",
+        "url": "{{baseUrl}}/api/audit-logs/me"
+      },
+      "response": []
+    },
+    {
+      "name": "Logout",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n  \"refreshToken\": \"{{refreshToken}}\"\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": "{{baseUrl}}/api/auth/logout"
+      },
+      "response": []
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "accessToken",
+      "value": "",
+      "type": "string",
+      "secret": true
+    },
+    {
+      "key": "refreshToken",
+      "value": "",
+      "type": "string",
+      "secret": true
+    },
+    {
+      "key": "documentId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "shareId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "recipientEmail",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "newFileName",
+      "value": "renamed-document.pdf",
+      "type": "string"
+    },
+    {
+      "key": "searchTerm",
+      "value": "",
+      "type": "string"
+    }
+  ]
+}
